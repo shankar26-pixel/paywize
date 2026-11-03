@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+/* Tokens mirror the v2 Web Design System variables (Figma: v2-Web---DesignSystem). */
+:root {
+  --brand-primary: #533cd2;
+  --brand-secondary: #6e56f6;
+  --brand-primary-container: #efecff;
+  --brand-on-primary: #ffffff;
+  --brand-on-secondary-container: #3b28a8;
+
+  --surface: #ffffff;
+  --surface-variant: #f4f5fa;
+  --surface-background: #f9f9fb;
+  --surface-container: #eeeeee;
+
+  --text-primary: #25253c;
+  --text-secondary: #606078;
+  --text-tertiary: #8b8ba3;
+  --text-disabled: #b0b0c3;
+
+  --border: #d9d9e8;
+  --border-variant: #eaeaf3;
+
+  --button-bg: #231f45;
+  --button-text: #ffffff;
+
+  --success: #12a150;
+  --success-container: #e6f6ed;
+  --on-success-container: #0b5d32;
+  --error: #e5484d;
+  --error-strong: #9e1c23;
+  --error-container: #fdecec;
+  --on-error-container: #9e1c23;
+  --warning: #f5a524;
+  --warning-container: #fef3dc;
+  --on-warning-container: #8a5200;
+  --info: #3b6fd8;
+  --info-container: #e8f0fe;
+  --on-info-container: #1b4db1;
+
+  --scrim: rgba(0, 0, 0, 0.5);
+  --orb-top: #efecff;
+  --orb-bottom: #533cd2;
+  --orb-stroke: #ffffff;
+  --shadow-pop: 0 12px 32px rgba(37, 37, 60, 0.12), 0 2px 6px rgba(37, 37, 60, 0.06);
+}
+
+/* Dark theme: follows the system unless the viewer picks Light or Dark in the account menu (data-theme on <html>). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --brand-primary: #8b78ff;
+    --brand-secondary: #7d68ff;
+    --brand-primary-container: #2c2563;
+    --brand-on-secondary-container: #cfc6ff;
+
+    --surface: #1c1c2b;
+    --surface-variant: #232336;
+    --surface-background: #13131d;
+    --surface-container: #2a2a3d;
+
+    --text-primary: #ececf5;
+    --text-secondary: #a9a9c0;
+    --text-tertiary: #8686a0;
+    --text-disabled: #5d5d75;
+
+    --border: #3a3a52;
+    --border-variant: #2e2e44;
+
+    --button-bg: #ececf5;
+    --button-text: #1c1c2b;
+
+    --success-container: #10331f;
+    --on-success-container: #7fdca6;
+    --error-container: #3a1719;
+    --on-error-container: #ff9b9f;
+    --error-strong: #c4373d;
+    --warning-container: #3a2a0c;
+    --on-warning-container: #f7c66b;
+    --info-container: #14254a;
+    --on-info-container: #9dbcff;
+
+    --scrim: rgba(0, 0, 0, 0.65);
+    --orb-top: #2c2563;
+    --orb-bottom: #8b78ff;
+    --orb-stroke: rgba(255, 255, 255, 0.18);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --brand-primary: #8b78ff;
+  --brand-secondary: #7d68ff;
+  --brand-primary-container: #2c2563;
+  --brand-on-secondary-container: #cfc6ff;
+
+  --surface: #1c1c2b;
+  --surface-variant: #232336;
+  --surface-background: #13131d;
+  --surface-container: #2a2a3d;
+
+  --text-primary: #ececf5;
+  --text-secondary: #a9a9c0;
+  --text-tertiary: #8686a0;
+  --text-disabled: #5d5d75;
+
+  --border: #3a3a52;
+  --border-variant: #2e2e44;
+
+  --button-bg: #ececf5;
+  --button-text: #1c1c2b;
+
+  --success-container: #10331f;
+  --on-success-container: #7fdca6;
+  --error-container: #3a1719;
+  --on-error-container: #ff9b9f;
+  --error-strong: #c4373d;
+  --warning-container: #3a2a0c;
+  --on-warning-container: #f7c66b;
+  --info-container: #14254a;
+  --on-info-container: #9dbcff;
+
+  --scrim: rgba(0, 0, 0, 0.65);
+  --orb-top: #2c2563;
+  --orb-bottom: #8b78ff;
+  --orb-stroke: rgba(255, 255, 255, 0.18);
+}
+
+@theme inline {
+  --color-brand: var(--brand-primary);
+  --color-brand-2: var(--brand-secondary);
+  --color-brand-container: var(--brand-primary-container);
+  --color-on-brand: var(--brand-on-primary);
+  --color-brand-dark: var(--brand-on-secondary-container);
+  --color-surface: var(--surface);
+  --color-surface-variant: var(--surface-variant);
+  --color-surface-bg: var(--surface-background);
+  --color-container: var(--surface-container);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-tertiary);
+  --color-ink-disabled: var(--text-disabled);
+  --color-line: var(--border);
+  --color-line-2: var(--border-variant);
+  --color-btn: var(--button-bg);
+  --color-btn-text: var(--button-text);
+  --color-success: var(--success);
+  --color-success-container: var(--success-container);
+  --color-on-success: var(--on-success-container);
+  --color-error: var(--error);
+  --color-error-strong: var(--error-strong);
+  --color-error-container: var(--error-container);
+  --color-on-error: var(--on-error-container);
+  --color-warning: var(--warning);
+  --color-warning-container: var(--warning-container);
+  --color-on-warning: var(--on-warning-container);
+  --color-info: var(--info);
+  --color-info-container: var(--info-container);
+  --color-on-info: var(--on-info-container);
+  --font-sans: var(--font-figtree);
+}
+
+html,
+body {
+  background: var(--surface-background);
+  color: var(--text-primary);
+  font-family: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Text styles from the DS */
+/* Class names keep the DS style names; sizes are one step up from the DS for readability. */
+.t-28b { font-size: 32px; line-height: 40px; font-weight: 700; }
+.t-22b { font-size: 24px; line-height: 30px; font-weight: 700; }
+.t-18s { font-size: 20px; line-height: 26px; font-weight: 600; }
+.t-16s { font-size: 18px; line-height: 22px; font-weight: 600; }
+.t-14s { font-size: 16px; line-height: 20px; font-weight: 600; }
+.t-14m { font-size: 16px; line-height: 20px; font-weight: 500; }
+.t-14r { font-size: 16px; line-height: 22px; font-weight: 400; }
+.t-12s { font-size: 14px; line-height: 18px; font-weight: 600; }
+.t-12r { font-size: 14px; line-height: 20px; font-weight: 400; }
+
+/* In a layer so utilities (e.g. outline-none on inputs inside a field box) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes chevron-flow {
+  0% { opacity: 0.15; }
+  40% { opacity: 1; }
+  100% { opacity: 0.15; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes scan {
+  0%, 100% { transform: translateX(-10px); }
+  50% { transform: translateX(10px); }
+}
+.anim-fade-up { animation: fade-up 260ms ease-out both; }
+.anim-pop { animation: pop-in 200ms ease-out both; }
+.anim-scan { animation: scan 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-up, .anim-pop, .anim-scan { animation: none; }
+}
+
+/* ── Experience motion: scans, celebrations, toasts, page direction ── */
+@keyframes scanline {
+  0% { top: 12px; }
+  50% { top: calc(100% - 14px); }
+  100% { top: 12px; }
+}
+@keyframes burst {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes ring {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(1.7); opacity: 0; }
+}
+@keyframes draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes confetti {
+  0% { transform: translate(-50%, 0) rotate(0); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(var(--dy) + 120px)) rotate(var(--r)); opacity: 0; }
+}
+@keyframes slide-forward {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-back {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fill-bar {
+  from { width: 6%; }
+  to { width: 100%; }
+}
+.anim-scanline { animation: scanline 1.8s ease-in-out infinite; }
+.anim-burst { animation: burst 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.anim-ring { animation: ring 900ms 250ms ease-out both; }
+.anim-draw { stroke-dasharray: 1; animation: draw 420ms 280ms ease-out both; }
+.anim-confetti { animation: confetti 1100ms cubic-bezier(0.15, 0.6, 0.3, 1) both; }
+.anim-forward { animation: slide-forward 280ms ease-out both; }
+.anim-back { animation: slide-back 280ms ease-out both; }
+.anim-toast { animation: toast-in 220ms ease-out both; }
+.anim-fill { animation: fill-bar 1300ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-scanline, .anim-burst, .anim-ring, .anim-draw, .anim-confetti, .anim-forward, .anim-back, .anim-toast, .anim-fill {
+    animation: none;
+  }
+  .anim-draw { stroke-dasharray: none; }
+}
