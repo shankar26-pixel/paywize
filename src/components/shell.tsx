@@ -365,14 +365,18 @@ export function Page({
   subtitle,
   children,
   bare,
+  icon,
 }: {
   title: string;
   subtitle: ReactNode;
   children: ReactNode;
   bare?: boolean;
+  /** Result badge shown above the heading on success, failed and confirmation screens. */
+  icon?: ReactNode;
 }) {
   return (
     <section className="flex w-full max-w-[640px] flex-col items-center gap-5">
+      {icon && <div className="-mb-1 flex justify-center">{icon}</div>}
       <div className="flex w-full flex-col items-center gap-1.5 text-center">
         <h1 className="t-28b text-ink">{title}</h1>
         <p className="t-14r text-ink-2">{subtitle}</p>

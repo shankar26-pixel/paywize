@@ -19,7 +19,7 @@ import {
 import { CirclePlus, FileCheck } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, UploadRow, startUpload, supportMail, type Ctx } from "./common";
-import { ProcessView, ScanArt } from "./process";
+import { ProcessView, ResultIcon, ScanArt } from "./process";
 import type { DocState } from "./state";
 
 /* ───────────── 3.0 Key persons ───────────── */
@@ -134,7 +134,7 @@ export function IndividualApplicant({ s, go }: Ctx) {
 
 export function DirectorFlagged({ s, set, replace }: Ctx) {
   return (
-    <Page title="A director needs attention" subtitle="MCA shows a problem with one director.">
+    <Page title="A director needs attention" subtitle="MCA shows a problem with one director." icon={<ResultIcon tone="warning" />}>
       <PersonRow name="Karan Nair" role="DIN deactivated on MCA" trailing={<Chip tone="error">Action needed</Chip>} />
       <Alert tone="warning" title="We cannot proceed with this person">
         Remove them, or ask them to fix their DIN with MCA.
@@ -183,7 +183,7 @@ export function CkycCheck({ s, replace, toast }: Ctx) {
 
 export function CkycFound({ s, go }: Ctx) {
   return (
-    <Page title="We found a CKYC record" subtitle="Your verified profile is linked automatically.">
+    <Page title="We found a CKYC record" subtitle="Your verified profile is linked automatically." icon={<ResultIcon tone="success" />}>
       <div>
         <Chip tone="success">Verified</Chip>
       </div>

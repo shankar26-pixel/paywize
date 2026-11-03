@@ -6,6 +6,7 @@ import { Page } from "@/components/shell";
 import { POLICIES } from "./data";
 import { Actions, UploadRow, startUpload, type Ctx } from "./common";
 import type { Collection } from "./state";
+import { ResultIcon } from "./process";
 
 const METHODS: { value: Collection; title: string; desc: string; icon: React.ReactNode }[] = [
   { value: "web", title: "E-commerce website", desc: "Customers pay on your site", icon: <Globe size={20} /> },
@@ -119,7 +120,7 @@ export function CollectionMethod({ s, set, go, update }: Ctx) {
 
 export function ContentDiffers({ go }: Ctx) {
   return (
-    <Page title="Your site looks different" subtitle="The content does not match the category you declared.">
+    <Page title="Your site looks different" subtitle="The content does not match the category you declared." icon={<ResultIcon tone="warning" />}>
       <dl className="w-full overflow-hidden rounded-xl border border-line-2">
         <div className="flex min-h-[43px] items-center justify-between gap-4 px-4 py-2">
           <dt className="t-12r flex items-center gap-2 text-ink-2">

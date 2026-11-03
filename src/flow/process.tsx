@@ -128,16 +128,64 @@ export function ScanArt() {
 
 const CONFETTI = ["#533cd2", "#6e56f6", "#12a150", "#f5a524", "#e5484d", "#3b6fd8"];
 
-/** Big animated success mark, with optional confetti for the moments that deserve it. */
+export type ResultTone = "success" | "error" | "warning" | "info";
+
+const RESULT_BG: Record<ResultTone, string> = {
+  success: "var(--success)",
+  error: "var(--error)",
+  warning: "var(--warning)",
+  info: "var(--info)",
+};
+
+/**
+ * Result badge from the "Heading block" in Figma (4.1.1): a solid 54px circle in the semantic
+ * colour with a white 36px glyph, stroke 3.75. Tick for success, cross for failed, "!" for
+ * something to act on, clock for in review. Pops in with a ring; the glyph draws itself.
+ */
+export function ResultIcon({ tone }: { tone: ResultTone }) {
+  const stroke = { stroke: "white", strokeWidth: 3.75, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
+  return (
+    <span
+      className="anim-burst relative flex size-[54px] shrink-0 items-center justify-center rounded-full"
+      style={{ background: RESULT_BG[tone] }}
+      aria-hidden="true"
+    >
+      <span className="anim-ring absolute inset-0 rounded-full border-2" style={{ borderColor: RESULT_BG[tone] }} />
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        {tone === "success" && <path d="M30 9L13.5 25.5L6 18" {...stroke} className="anim-draw" pathLength={1} />}
+        {tone === "error" && (
+          <>
+            <path d="M26 10L10 26" {...stroke} className="anim-draw" pathLength={1} />
+            <path d="M10 10L26 26" {...stroke} className="anim-draw" pathLength={1} />
+          </>
+        )}
+        {tone === "warning" && (
+          <>
+            <path d="M18 9V20" {...stroke} className="anim-draw" pathLength={1} />
+            <circle cx="18" cy="26.5" r="2.3" fill="white" />
+          </>
+        )}
+        {tone === "info" && (
+          <>
+            <circle cx="18" cy="18" r="11.5" {...stroke} strokeWidth={3} />
+            <path d="M18 11.5V18L22.5 20.5" {...stroke} strokeWidth={3} className="anim-draw" pathLength={1} />
+          </>
+        )}
+      </svg>
+    </span>
+  );
+}
+
+/** Success badge, with optional confetti for the moments that deserve it (approved, live). */
 export function Celebrate({ confetti }: { confetti?: boolean }) {
   return (
-    <div className="relative flex justify-center py-2" aria-hidden="true">
+    <div className="relative flex justify-center" aria-hidden="true">
       {confetti && (
         <div className="pointer-events-none absolute inset-x-0 -top-4 h-40 overflow-visible">
           {Array.from({ length: 28 }).map((_, i) => (
             <span
               key={i}
-              className="anim-confetti absolute top-10 left-1/2 block h-2.5 w-1.5 rounded-[1px]"
+              className="anim-confetti absolute top-8 left-1/2 block h-2.5 w-1.5 rounded-[1px]"
               style={
                 {
                   background: CONFETTI[i % CONFETTI.length],
@@ -151,20 +199,7 @@ export function Celebrate({ confetti }: { confetti?: boolean }) {
           ))}
         </div>
       )}
-      <span className="anim-burst relative flex size-[72px] items-center justify-center rounded-full bg-success-container">
-        <span className="anim-ring absolute inset-0 rounded-full border-2 border-success" />
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-success">
-          <path
-            d="M5 12.5 10 17 19 7.5"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="anim-draw"
-            pathLength={1}
-          />
-        </svg>
-      </span>
+      <ResultIcon tone="success" />
     </div>
   );
 }

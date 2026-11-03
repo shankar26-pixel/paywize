@@ -5,7 +5,7 @@ import { FileCheck, Landmark } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { IFSC_BANKS } from "./data";
 import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
-import { Celebrate, ProcessView } from "./process";
+import { ProcessView, ResultIcon } from "./process";
 import type { FlowState } from "./state";
 
 const IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -157,10 +157,7 @@ export function PennyDrop({ s, replace, toast }: Ctx) {
 
 export function AccountVerified({ s, go }: Ctx) {
   return (
-    <Page title="Account verified" subtitle="The name on the account matches your business.">
-      <div className="pb-2">
-        <Celebrate />
-      </div>
+    <Page title="Account verified" subtitle="The name on the account matches your business." icon={<ResultIcon tone="success" />}>
       <SummaryTable
         rows={[
           { label: "Name on the account", value: s.holder || accountName(s) },
@@ -179,7 +176,7 @@ function accountName(s: FlowState) {
 
 export function NameMismatch({ s, set }: Ctx) {
   return (
-    <Page title="The names do not match" subtitle="We found a different name on this account.">
+    <Page title="The names do not match" subtitle="We found a different name on this account." icon={<ResultIcon tone="warning" />}>
       <div>
         <Chip tone="warning">Name mismatch</Chip>
       </div>

@@ -5,7 +5,7 @@ import { Alert, Button, Chip, CtaRow, DocRow, formatSize, type Tone } from "@/co
 import { Building, FileCheck } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import type { DocState, FlowState } from "./state";
-import { Celebrate } from "./process";
+import { Celebrate, ResultIcon } from "./process";
 
 export type Ctx = {
   s: FlowState;
@@ -116,8 +116,8 @@ export function StatusScreen({
   celebrate?: boolean | "confetti";
 }) {
   return (
-    <Page title={title} subtitle={subtitle}>
-      {celebrate && <Celebrate confetti={celebrate === "confetti"} />}
+    <Page title={title} subtitle={subtitle} icon={<ResultIcon tone={tone} />}>
+      {celebrate === "confetti" && <Celebrate confetti />}
       {children}
       <Alert tone={tone} title={alertTitle}>
         {alertText}

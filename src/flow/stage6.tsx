@@ -18,6 +18,7 @@ import { AlertBadge, Building, CheckBadge, FileText, Landmark, Pencil, ShieldChe
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, SuccessScreen, acceptFile, supportMail, useFilePicker, type Ctx } from "./common";
 import { resolveIfsc, maskAcct } from "./stage4";
+import { ResultIcon } from "./process";
 import { initialState, type Collection, type FlowState, type Modal as ModalId } from "./state";
 
 /* ───────────── 6.0 Review and submit ───────────── */
@@ -396,7 +397,7 @@ export function DocumentDeficiency({ set, go }: Ctx) {
     if (d.status === "uploaded") go("6.1");
   });
   return (
-    <Page title="One document needs attention" subtitle="Please upload a clearer copy.">
+    <Page title="One document needs attention" subtitle="Please upload a clearer copy." icon={<ResultIcon tone="warning" />}>
       {input}
       <StatusRow icon={<FileText size={20} />} title="Cancelled cheque or statement" sub="Rejected: image unclear" chip="Rejected" tone="error" />
       <AlertSlim>Upload a clear, full-page copy. We will resume the review right away.</AlertSlim>
