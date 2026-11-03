@@ -5,7 +5,7 @@ import { FileCheck, Landmark } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { IFSC_BANKS } from "./data";
 import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
-import { ProcessView } from "./process";
+import { Celebrate, ProcessView } from "./process";
 import type { FlowState } from "./state";
 
 const IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -158,6 +158,9 @@ export function PennyDrop({ s, replace, toast }: Ctx) {
 export function AccountVerified({ s, go }: Ctx) {
   return (
     <Page title="Account verified" subtitle="The name on the account matches your business.">
+      <div className="pb-2">
+        <Celebrate />
+      </div>
       <SummaryTable
         rows={[
           { label: "Name on the account", value: s.holder || accountName(s) },
