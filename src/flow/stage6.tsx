@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Button,
   Checkbox,
@@ -14,11 +14,11 @@ import {
   SummaryTable,
   type Tone,
 } from "@/components/ui/ds";
-import { AlertBadge, Building, CheckBadge, FileText, Landmark, Pencil, ShieldCheck } from "@/components/ui/icons";
+import { AlertBadge, CheckBadge, FileText, Pencil } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, SuccessScreen, acceptFile, supportMail, useFilePicker, type Ctx } from "./common";
 import { resolveIfsc, maskAcct } from "./stage4";
-import { ResultIcon } from "./process";
+import { ResultIcon, VerifyScreen } from "./process";
 import { initialState, type Collection, type FlowState, type Modal as ModalId } from "./state";
 
 /* ───────────── 6.0 Review and submit ───────────── */
@@ -325,43 +325,18 @@ function StatusRow({ icon, title, sub, chip, tone }: { icon: React.ReactNode; ti
   return <DocRow variant="neutral" icon={icon} title={title} description={sub} trailing={<Chip tone={tone}>{chip}</Chip>} />;
 }
 
-/** Checks finish one after another; business checks stay in review, as in the design. */
-export function Screening({ go }: Ctx) {
-  const [phase, setPhase] = useState(0);
-  useEffect(() => {
-    if (phase >= 3) return;
-    const t = setTimeout(() => setPhase((p) => p + 1), [1200, 1300, 900][phase]);
-    return () => clearTimeout(t);
-  }, [phase]);
-  const row = (i: number, icon: React.ReactNode, title: string, doneSub: string) => {
-    const done = phase > i;
-    const running = phase === i;
-    return (
-      <DocRow
-        variant="neutral"
-        icon={running ? <span className="size-4 animate-spin rounded-full border-2 border-brand border-t-transparent" /> : icon}
-        title={title}
-        description={done ? doneSub : running ? "Checking now…" : "Waiting"}
-        trailing={done ? <Chip tone="success">Verified</Chip> : <Chip tone="info">{running ? "Checking" : "Queued"}</Chip>}
-      />
-    );
-  };
+export function Screening({ replace }: Ctx) {
   return (
-    <Page title="We are verifying your details" subtitle="This usually takes a few minutes. You can leave this page.">
-      <div className="flex flex-col gap-3" aria-live="polite">
-        {row(0, <ShieldCheck size={20} />, "Identity and PAN", "Checked")}
-        {row(1, <Landmark size={20} />, "Bank account", "Checked")}
-        <DocRow
-          variant="neutral"
-          icon={phase >= 2 ? <span className="size-4 animate-spin rounded-full border-2 border-brand border-t-transparent" /> : <Building size={20} />}
-          title="Business checks"
-          description={phase >= 2 ? "In progress. A reviewer may take a quick look." : "Waiting"}
-          trailing={<Chip tone="info">{phase >= 2 ? "In review" : "Queued"}</Chip>}
-        />
-      </div>
-      <p className="t-12r text-ink-2">We will email you the moment there is a decision. You can close this page.</p>
-      <Actions actions={[{ label: "View status", disabled: phase < 3, onClick: () => go("6.2") }]} />
-    </Page>
+    <VerifyScreen
+      title="We are verifying your details"
+      steps={[
+        { label: "Checking your identity and PAN", ms: 1200 },
+        { label: "Checking your bank account", ms: 1300 },
+        { label: "Running business checks", ms: 900 },
+      ]}
+      note="We will email you as soon as there is a decision."
+      onDone={() => replace("6.2")}
+    />
   );
 }
 

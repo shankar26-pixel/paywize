@@ -5,7 +5,7 @@ import { FileCheck, Landmark } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { IFSC_BANKS } from "./data";
 import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
-import { ProcessView, ResultIcon } from "./process";
+import { ResultIcon, VerifyScreen } from "./process";
 import { MISSING, type FlowState } from "./state";
 
 const IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -93,24 +93,6 @@ export function AccountDetails({ s, set, go }: Ctx) {
 
 /* ───────────── 4.1 Penny drop ───────────── */
 
-function Chevrons() {
-  return (
-    <svg width="62" height="40" viewBox="0 0 62 40" fill="none" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <path
-          key={i}
-          d={`M${10 + i * 16} 8l12 12-12 12`}
-          stroke="var(--brand-on-secondary-container)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ animation: `chevron-flow 1.2s ${i * 0.2}s infinite both` }}
-        />
-      ))}
-    </svg>
-  );
-}
-
 export function pennyOutcome(s: FlowState) {
   if (s.acct.endsWith("0000")) return { screen: "4.1.E1", modal: null };
   if (s.acct.endsWith("1111")) return { screen: "4.1.2", modal: "bank-proof" as const };
@@ -121,37 +103,20 @@ export function PennyDrop({ s, replace, toast }: Ctx) {
   const ifsc = resolveIfsc(s.ifsc);
   const bank = ifsc.state === "ok" ? ifsc.bank.short : "your bank";
   return (
-    <Page title="Verifying your account" subtitle="We are sending ₹1 by IMPS. This takes a few seconds.">
-      <ProcessView
-        art={
-          <div className="flex items-center gap-10 sm:gap-[72px]">
-            <div className="flex w-[89px] flex-col items-center gap-2 text-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/paywize-mark.svg" alt="" width={32} height={32} />
-              <p className="t-16s text-ink">Paywize</p>
-              <p className="t-12r text-ink-2">Bank Account</p>
-            </div>
-            <Chevrons />
-            <div className="flex w-[89px] flex-col items-center gap-2 text-center">
-              <BankLogo size={32} />
-              <p className="t-16s truncate text-ink">{ifsc.state === "ok" ? ifsc.bank.short : "Your bank"}</p>
-              <p className="t-12r text-ink-2">••••{s.acct.slice(-4)}</p>
-            </div>
-          </div>
-        }
-        steps={[
-          { label: "Sending ₹1 by IMPS", ms: 1100 },
-          { label: `Waiting for ${bank} to confirm`, ms: 1400 },
-          { label: "Matching the account name with your business", ms: 1000 },
-        ]}
-        footnote="The ₹1 stays in your account. Please keep this page open."
-        onDone={() => {
-          const o = pennyOutcome(s);
-          replace(o.screen, { modal: o.modal });
-          if (o.screen === "4.1.1") toast("Bank account verified", `${bank} ••••${s.acct.slice(-4)} will receive your settlements.`);
-        }}
-      />
-    </Page>
+    <VerifyScreen
+      title="Verifying your account"
+      steps={[
+        { label: "Sending ₹1 by IMPS", ms: 1100 },
+        { label: `Waiting for ${bank} to confirm`, ms: 1400 },
+        { label: "Matching the account name with your business", ms: 1000 },
+      ]}
+      note="The ₹1 stays in your account. Please keep this page open."
+      onDone={() => {
+        const o = pennyOutcome(s);
+        replace(o.screen, { modal: o.modal });
+        if (o.screen === "4.1.1") toast("Bank account verified", `${bank} ••••${s.acct.slice(-4)} will receive your settlements.`);
+      }}
+    />
   );
 }
 

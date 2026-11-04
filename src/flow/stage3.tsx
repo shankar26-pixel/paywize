@@ -19,7 +19,7 @@ import {
 import { CirclePlus, FileCheck } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, UploadRow, startUpload, supportMail, type Ctx } from "./common";
-import { ProcessView, ResultIcon, ScanArt } from "./process";
+import { ResultIcon, VerifyScreen } from "./process";
 import { MISSING, type DocState } from "./state";
 
 /* ───────────── 3.0 Key persons ───────────── */
@@ -165,21 +165,19 @@ function ownerName(s: Ctx["s"]) {
 
 export function CkycCheck({ s, replace, toast }: Ctx) {
   return (
-    <Page title="Checking your CKYC record" subtitle="We check each owner against the central registry.">
-      <ProcessView
-        art={<ScanArt />}
-        steps={[
-          { label: "Matching your PAN and date of birth", ms: 1000 },
-          { label: "Searching the CERSAI CKYC registry", ms: 1600 },
-          { label: `Linking the verified profile for ${ownerName(s).split(" ")[0]}`, ms: 900 },
-        ]}
-        footnote="Usually under 10 seconds. You do not need to upload anything if we find a record."
-        onDone={() => {
-          replace("3.1.1");
-          toast("CKYC record found", "Your verified profile is linked.");
-        }}
-      />
-    </Page>
+    <VerifyScreen
+      title="Checking your CKYC record"
+      steps={[
+        { label: "Matching your PAN and date of birth", ms: 1000 },
+        { label: "Searching the CKYC registry", ms: 1600 },
+        { label: `Linking the verified profile for ${ownerName(s).split(" ")[0]}`, ms: 900 },
+      ]}
+      note="This usually takes under 10 seconds."
+      onDone={() => {
+        replace("3.1.1");
+        toast("CKYC record found", "Your verified profile is linked.");
+      }}
+    />
   );
 }
 

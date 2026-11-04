@@ -204,13 +204,25 @@ body {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
-@keyframes scan {
-  0%, 100% { transform: translateX(-10px); }
-  50% { transform: translateX(10px); }
-}
 .anim-fade-up { animation: fade-up 260ms ease-out both; }
 .anim-pop { animation: pop-in 200ms ease-out both; }
-.anim-scan { animation: scan 1.6s ease-in-out infinite; }
+
+/* The verifying screen: three shapes that drift apart and tumble back together. */
+.anim-shape-a { transform: translate(-6px, -30px); animation: shape-a 1.8s ease-in-out infinite; }
+.anim-shape-b { transform: translate(0, 18px) rotate(28deg); animation: shape-b 1.8s ease-in-out infinite; }
+.anim-shape-c { transform: translate(20px, -10px) rotate(-40deg); animation: shape-c 1.8s ease-in-out infinite; }
+@keyframes shape-a {
+  0%, 100% { transform: translate(-6px, -30px) scale(1); }
+  50% { transform: translate(18px, 22px) scale(1.5); }
+}
+@keyframes shape-b {
+  0%, 100% { transform: translate(0, 18px) rotate(28deg) scaleX(1); }
+  50% { transform: translate(-14px, -22px) rotate(208deg) scaleX(0.6); }
+}
+@keyframes shape-c {
+  0%, 100% { transform: translate(20px, -10px) rotate(-40deg) scaleX(1); }
+  50% { transform: translate(-22px, 10px) rotate(140deg) scaleX(1.3); }
+}
 
 /* The verification pass drops in on its cord; the swing is a pendulum in usePendulum. */
 .anim-pass {
@@ -239,15 +251,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-fade-up, .anim-pop, .anim-scan { animation: none; }
+  .anim-fade-up, .anim-pop { animation: none; }
 }
 
 /* ── Experience motion: scans, celebrations, toasts, page direction ── */
-@keyframes scanline {
-  0% { top: 12px; }
-  50% { top: calc(100% - 14px); }
-  100% { top: 12px; }
-}
 @keyframes burst {
   0% { transform: scale(0.4); opacity: 0; }
   60% { transform: scale(1.08); opacity: 1; }
@@ -277,7 +284,6 @@ body {
   from { width: 6%; }
   to { width: 100%; }
 }
-.anim-scanline { animation: scanline 1.8s ease-in-out infinite; }
 .anim-burst { animation: burst 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .anim-ring { animation: ring 900ms 250ms ease-out both; }
 .anim-draw { stroke-dasharray: 1; animation: draw 420ms 280ms ease-out both; }
@@ -287,7 +293,7 @@ body {
 .anim-fill { animation: fill-bar 1300ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-scanline, .anim-burst, .anim-ring, .anim-draw, .anim-confetti, .anim-step, .anim-toast, .anim-fill, .anim-ring-load, .anim-pass {
+  .anim-shape-a, .anim-shape-b, .anim-shape-c, .anim-burst, .anim-ring, .anim-draw, .anim-confetti, .anim-step, .anim-toast, .anim-fill, .anim-ring-load, .anim-pass {
     animation: none;
   }
   .anim-ring-load { stroke-dasharray: none; }

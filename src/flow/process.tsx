@@ -1,105 +1,57 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { cx } from "@/components/ui/ds";
-import { Check } from "@/components/ui/icons";
+import { useEffect, useRef, useState } from "react";
 
-/* ───────────────────────── Live processing view ───────────────────────── */
+/* ───────────────────────── Verifying screen ───────────────────────── */
 
 export type ProcessStep = { label: string; ms: number };
 
 /**
- * A "we're working on it" block: illustration and a checklist that ticks off step by step. Calls onDone once every step has finished. Used for CKYC, penny drop, DigiLocker
- * and screening, so every wait looks and behaves the same.
+ * The full-page wait used by every check: CKYC, penny drop, DigiLocker, selfie, screening and retries.
+ * Moving shapes, a title and "1 of 3: what is happening now". Calls onDone once every step has finished.
  */
-export function ProcessView({
+export function VerifyScreen({
+  title,
   steps,
+  note,
   onDone,
-  art,
-  footnote,
 }: {
+  title: string;
   steps: ProcessStep[];
+  note?: string;
   onDone: () => void;
-  art?: ReactNode;
-  footnote?: string;
 }) {
   const [active, setActive] = useState(0);
   const done = useRef(onDone);
+  const list = useRef(steps);
   useEffect(() => {
     done.current = onDone;
   });
 
   useEffect(() => {
-    if (active >= steps.length) {
-      const t = setTimeout(() => done.current(), 450);
+    const items = list.current;
+    if (active >= items.length) {
+      const t = setTimeout(() => done.current(), 300);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setActive((a) => a + 1), steps[active].ms);
+    const t = setTimeout(() => setActive((a) => a + 1), items[active].ms);
     return () => clearTimeout(t);
-  }, [active, steps]);
+  }, [active]);
 
-  const current = steps[Math.min(active, steps.length - 1)];
-
+  const shown = Math.min(active, steps.length - 1);
   return (
-    <div className="flex flex-col gap-5" aria-busy={active < steps.length}>
-      {art && <div className="flex justify-center pt-2">{art}</div>}
-      <p className="sr-only" aria-live="polite">
-        {active < steps.length ? current.label : "All done"}
+    <section className="flex min-h-[60vh] w-full max-w-[560px] flex-col items-center justify-center text-center" aria-busy={active < steps.length}>
+      <span className="relative mb-8 block size-28" aria-hidden="true">
+        <span className="anim-shape-a absolute top-1/2 left-1/2 -mt-1.5 -ml-1.5 size-3 rounded-full bg-success" />
+        <span className="anim-shape-b absolute top-1/2 left-1/2 -mt-1 -ml-6 h-2 w-12 rounded-full bg-warning" />
+        <span className="anim-shape-c absolute top-1/2 left-1/2 -mt-1 -ml-4 h-2 w-8 rounded-full bg-brand" />
+      </span>
+      <h1 className="t-28b text-ink">{title}</h1>
+      <p key={shown} className="t-14r anim-fade-up mt-2 text-ink-2" aria-live="polite">
+        {shown + 1} of {steps.length}: {steps[shown].label}
       </p>
-      <ol className="flex flex-col gap-3 rounded-xl bg-surface-variant p-4">
-        {steps.map((s, i) => {
-          const state = i < active ? "done" : i === active ? "active" : "todo";
-          return (
-            <li key={s.label} className="flex items-center gap-3">
-              <span
-                className={cx(
-                  "flex size-6 shrink-0 items-center justify-center rounded-full transition-colors",
-                  state === "done" && "bg-success text-white",
-                  state === "active" && "bg-brand-container text-brand",
-                  state === "todo" && "border border-line",
-                )}
-              >
-                {state === "done" ? (
-                  <Check size={14} strokeWidth={2.4} />
-                ) : state === "active" ? (
-                  <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : null}
-              </span>
-              <span className={cx("t-14r", state === "todo" ? "text-ink-3" : "text-ink")}>{s.label}</span>
-            </li>
-          );
-        })}
-      </ol>
-      {footnote && <p className="t-12r text-center text-ink-2">{footnote}</p>}
-    </div>
-  );
-}
-
-/** Document under a moving magnifier, for registry look-ups. */
-export function ScanArt() {
-  return (
-    <div className="relative h-[96px] w-[220px]" aria-hidden="true">
-      {[-70, 70].map((x) => (
-        <span
-          key={x}
-          className="absolute top-4 flex h-[64px] w-[50px] flex-col gap-1.5 rounded-md bg-surface-variant p-2 shadow-sm"
-          style={{ left: `calc(50% + ${x}px - 25px)` }}
-        >
-          {[70, 90, 60, 80].map((w, i) => (
-            <span key={i} className="h-1 rounded bg-line" style={{ width: `${w}%` }} />
-          ))}
-        </span>
-      ))}
-      <span className="absolute top-0 left-1/2 flex h-[88px] w-[68px] -translate-x-1/2 flex-col gap-2 rounded-lg border border-line bg-surface p-3 shadow-md">
-        {[80, 60, 90, 70, 50].map((w, i) => (
-          <span key={i} className="h-1.5 rounded bg-brand-container" style={{ width: `${w}%` }} />
-        ))}
-        <span className="anim-scanline absolute inset-x-2 h-0.5 rounded bg-brand opacity-70" />
-      </span>
-      <span className="anim-scan absolute top-6 left-1/2 -ml-6 block size-12 rounded-full border-[5px] border-brand">
-        <span className="absolute -right-4 -bottom-3 h-2 w-6 rotate-45 rounded-full bg-brand" />
-      </span>
-    </div>
+      {note && <p className="t-12r mt-6 text-ink-3">{note}</p>}
+    </section>
   );
 }
 

@@ -11,7 +11,6 @@ import {
   FieldHelp,
   Input,
   Modal,
-  ModalHeader,
   OptionRow,
   Select,
   SummaryTable,
@@ -23,7 +22,7 @@ import { LINES_OF_BUSINESS, LOB_DOC, PAN_ERRORS, PAN_PATTERN, lookupPan, require
 import { Actions, RemoveFile, StatusScreen, UploadRow, acceptFile, startUpload, supportMail, useFilePicker, type Ctx } from "./common";
 import { MISSING, initialState, type DocState } from "./state";
 import { PanCard } from "./PanCard";
-import { ProcessView, ScanArt } from "./process";
+import { VerifyScreen } from "./process";
 
 /* ───────────── 2.0 PAN entry, GST and CIN selection ───────────── */
 
@@ -338,7 +337,21 @@ export function ConfirmIndividualModal({ s, set, go, toast }: Ctx) {
 /* ───────────── 2.1A error states ───────────── */
 
 export function McaFailed({ s, set, go }: Ctx) {
-  const [busy, setBusy] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  if (retrying)
+    return (
+      <VerifyScreen
+        title="Reconnecting to MCA"
+        steps={[
+          { label: "Connecting to the MCA records service", ms: 900 },
+          { label: "Fetching your company records", ms: 1000 },
+        ]}
+        onDone={() => {
+          setRetrying(false);
+          set({ record: s.record && { ...s.record, mca: undefined }, modal: "confirm-company" });
+        }}
+      />
+    );
   return (
     <StatusScreen
       title="We could not reach MCA"
@@ -348,17 +361,7 @@ export function McaFailed({ s, set, go }: Ctx) {
       alertText="Try again, or enter the details yourself and we will verify them."
       actions={[
         { label: "Enter manually", variant: "secondary", onClick: () => go("2.1A.M") },
-        {
-          label: busy ? "Trying…" : "Try again",
-          disabled: busy,
-          onClick: () => {
-            setBusy(true);
-            setTimeout(() => {
-              setBusy(false);
-              set({ record: s.record && { ...s.record, mca: undefined }, modal: "confirm-company" });
-            }, 900);
-          },
-        },
+        { label: "Try again", onClick: () => setRetrying(true) },
       ]}
     />
   );
@@ -616,21 +619,19 @@ export function DigiLockerConsent({ go }: Ctx) {
 /** Live fetch from DigiLocker after consent. */
 export function DigiLockerFetch({ replace, toast }: Ctx) {
   return (
-    <Page title="Fetching your address" subtitle="Approve the request in DigiLocker. We will pick it up here.">
-      <ProcessView
-        art={<ScanArt />}
-        steps={[
-          { label: "Opening DigiLocker securely", ms: 900 },
-          { label: "Waiting for your approval", ms: 1400 },
-          { label: "Reading your address", ms: 900 },
-        ]}
-        footnote="Usually about 5 seconds. Keep this page open."
-        onDone={() => {
-          replace("2.2B.3");
-          toast("Address verified", "Fetched from DigiLocker.");
-        }}
-      />
-    </Page>
+    <VerifyScreen
+      title="Fetching your address"
+      steps={[
+        { label: "Opening DigiLocker securely", ms: 900 },
+        { label: "Waiting for your approval in DigiLocker", ms: 1400 },
+        { label: "Reading your address", ms: 900 },
+      ]}
+      note="This usually takes about 5 seconds. Please keep this page open."
+      onDone={() => {
+        replace("2.2B.3");
+        toast("Address verified", "Fetched from DigiLocker.");
+      }}
+    />
   );
 }
 

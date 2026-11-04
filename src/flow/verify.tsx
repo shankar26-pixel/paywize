@@ -5,7 +5,7 @@ import { Button, Input, Select, SummaryTable, cx } from "@/components/ui/ds";
 import { Clock, IdCard, Sun } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
-import { ProcessView, ResultIcon } from "./process";
+import { ResultIcon, VerifyScreen } from "./process";
 import { MISSING, type DocState, type FlowState } from "./state";
 
 /** The person completing KYC: chosen on 3.0, or the applicant for individuals. */
@@ -154,25 +154,24 @@ export function FaceCapture({ replace }: Ctx) {
 
 export function FaceChecking({ s, replace, toast }: Ctx) {
   return (
-    <Page title="Checking your selfie" subtitle="This takes a few seconds.">
-      <ProcessView
-        steps={[
-          { label: "Confirming it is a live person", ms: 1100 },
-          { label: "Matching with your PAN and CKYC photo", ms: 1500 },
-          { label: "Saving the result securely", ms: 800 },
-        ]}
-        footnote="The video is deleted once the check is done."
-        onDone={() => {
-          if (s.faceFail) {
-            const faceFails = s.faceFails + 1;
-            if (faceFails >= FACE_ATTEMPTS) return replace("6.8.E3", { faceFails, faceLockUntil: Date.now() + DAY_MS });
-            return replace("6.8.E2", { faceFails });
-          }
-          replace("6.1", { faceFails: 0, faceLockUntil: 0 });
-          toast("Face verified", `${kycPerson(s)} · match score 98%`);
-        }}
-      />
-    </Page>
+    <VerifyScreen
+      title="Checking your selfie"
+      steps={[
+        { label: "Confirming it is a live person", ms: 1100 },
+        { label: "Matching with your PAN and CKYC photo", ms: 1500 },
+        { label: "Saving the result securely", ms: 800 },
+      ]}
+      note="The video is deleted once the check is done."
+      onDone={() => {
+        if (s.faceFail) {
+          const faceFails = s.faceFails + 1;
+          if (faceFails >= FACE_ATTEMPTS) return replace("6.8.E3", { faceFails, faceLockUntil: Date.now() + DAY_MS });
+          return replace("6.8.E2", { faceFails });
+        }
+        replace("6.1", { faceFails: 0, faceLockUntil: 0 });
+        toast("Face verified", `${kycPerson(s)} · match score 98%`);
+      }}
+    />
   );
 }
 
