@@ -326,7 +326,9 @@ export default function Onboarding() {
             <p className="t-12r px-2 pt-2 pb-4 text-ink-3">
               Demo PANs: AAACN1234Q company (several GST, CIN) · AABCN1234M single GST and CIN · AAAFS5821K firm ·
               AAAFS6120M LLP · AKPPS4821R individual · AAACM1234D MCA down · AAACG1234N no GSTIN · AAACZ1234S struck off.
-              Bank: account ending 0000 fails the deposit, 1111 gives a name mismatch. eSign code 000000 is wrong. Sign-up and sign-in codes: 000000 is wrong, 111111 has expired.
+              Bank: account 50100234564821, IFSC HDFC0001234 passes. An account ending 0000 fails the deposit, 1111 gives a name mismatch.
+              Storefront URL: https://www.nimbusfoods.in. App link: https://play.google.com/store/apps/details?id=in.nimbusfoods.app.
+              eSign code 000000 is wrong. Sign-up and sign-in codes: 000000 is wrong, 111111 has expired.
             </p>
           </div>
         </aside>

@@ -328,7 +328,7 @@ export function ConfirmIndividualModal({ s, set, go, toast }: Ctx) {
       )}
       {gst && (
         <Checkbox checked={s.includeGst} onChange={(includeGst) => set({ includeGst, gst: includeGst ? gst : "" })}>
-          <span className="t-14s">Include GSTIN {gst} found under this PAN (optional)</span>
+          Include GSTIN {gst} found under this PAN (optional)
         </Checkbox>
       )}
     </ConfirmPopup>

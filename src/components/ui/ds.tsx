@@ -462,7 +462,7 @@ export function Checkbox({
       <span className="mt-[-2px] rounded-[4px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand">
         <CheckBox checked={checked} />
       </span>
-      <span className="t-14r text-ink">{children}</span>
+      <span className="t-14s text-ink">{children}</span>
     </label>
   );
 }
