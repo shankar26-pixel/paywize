@@ -6,7 +6,7 @@ import { Clock, IdCard, Sun } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
 import { ProcessView, ResultIcon } from "./process";
-import type { DocState, FlowState } from "./state";
+import { MISSING, type DocState, type FlowState } from "./state";
 
 /** The person completing KYC: chosen on 3.0, or the applicant for individuals. */
 export function kycPerson(s: FlowState) {
@@ -44,7 +44,7 @@ export function FaceIntro(ctx: Ctx) {
       <div className="flex flex-col gap-3">
         {TIPS.map((t) => (
           <div key={t.title} className="flex items-center gap-3 rounded-xl bg-container px-4 py-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-surface text-ink-2">{t.icon}</span>
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-ink-2">{t.icon}</span>
             <span className="flex flex-col gap-1">
               <span className="t-14s text-ink">{t.title}</span>
               <span className="t-12r text-ink-2">{t.desc}</span>
@@ -251,6 +251,7 @@ export function FacePhotos({ s, go, update, toast }: Ctx) {
             if (!IMAGE.test(file.name)) return apply(a.key, { status: "error", note: "Upload a JPG or PNG photo." });
             startUpload(file, (d) => apply(a.key, d));
           }}
+          onRemove={() => apply(a.key, MISSING)}
         />
       ))}
       <Actions

@@ -25,6 +25,9 @@ function Svg({ size = 20, children, ...rest }: IconProps & { children: React.Rea
 export const ArrowLeft = (p: IconProps) => (
   <Svg {...p}><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></Svg>
 );
+export const ArrowDown = (p: IconProps) => (
+  <Svg {...p}><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></Svg>
+);
 export const ChevronDown = (p: IconProps) => (
   <Svg {...p}><path d="m6 9 6 6 6-6" /></Svg>
 );
@@ -109,6 +112,9 @@ export const Eye = (p: IconProps) => (
 );
 export const EyeOff = (p: IconProps) => (
   <Svg {...p}><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /><path d="m2 2 20 20" /></Svg>
+);
+export const Trash = (p: IconProps) => (
+  <Svg {...p}><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M10 11v6" /><path d="M14 11v6" /></Svg>
 );
 export const Sun = (p: IconProps) => (
   <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></Svg>

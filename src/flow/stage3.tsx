@@ -20,7 +20,7 @@ import { CirclePlus, FileCheck } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { Actions, StatusScreen, UploadRow, startUpload, supportMail, type Ctx } from "./common";
 import { ProcessView, ResultIcon, ScanArt } from "./process";
-import type { DocState } from "./state";
+import { MISSING, type DocState } from "./state";
 
 /* ───────────── 3.0 Key persons ───────────── */
 
@@ -206,8 +206,8 @@ export function CkycUpload({ s, go, update }: Ctx) {
   const ready = s.poi.status === "uploaded" && s.poa.status === "uploaded";
   return (
     <Page title="We need your ID and address proof" subtitle="No CKYC record yet. We will create one for you.">
-      <UploadRow title="Proof of identity" hint="PAN, passport or voter ID" doc={s.poi} onPick={pick("poi")} />
-      <UploadRow title="Proof of address" hint="Aadhaar, utility bill or passport" doc={s.poa} onPick={pick("poa")} />
+      <UploadRow title="Proof of identity" hint="PAN, passport or voter ID" doc={s.poi} onPick={pick("poi")} onRemove={() => update(() => ({ poi: MISSING }))} />
+      <UploadRow title="Proof of address" hint="Aadhaar, utility bill or passport" doc={s.poa} onPick={pick("poa")} onRemove={() => update(() => ({ poa: MISSING }))} />
       <Actions actions={[{ label: "Continue", disabled: !ready, onClick: () => go("3.2") }]} />
     </Page>
   );

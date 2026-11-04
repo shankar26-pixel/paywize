@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Alert, Button, Chip, CtaRow, DocRow, formatSize, type Tone } from "@/components/ui/ds";
-import { Building, FileCheck } from "@/components/ui/icons";
+import { Building, FileCheck, Trash } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import type { DocState, FlowState } from "./state";
 import { Celebrate, ResultIcon } from "./process";
@@ -150,13 +150,28 @@ export function startUpload(file: File, apply: (d: DocState) => void) {
 
 /**
  * One row for any document: required (amber) or dropzone when missing, a progress bar while
- * uploading, a green chip once added, red when rejected. Clicking an added row replaces the file.
+ * uploading, a green chip and Remove once added, red when rejected.
  */
+export function RemoveFile({ name, onRemove }: { name?: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      aria-label={`Remove ${name ?? "file"}`}
+      title="Remove"
+      className="flex size-8 shrink-0 items-center justify-center rounded-full text-error transition-colors hover:bg-error-container"
+    >
+      <Trash size={20} />
+    </button>
+  );
+}
+
 export function UploadRow({
   title,
   hint,
   doc,
   onPick,
+  onRemove,
   empty = "dropzone",
   multiple,
 }: {
@@ -164,6 +179,7 @@ export function UploadRow({
   hint: string;
   doc: DocState;
   onPick: (files: File[]) => void;
+  onRemove: () => void;
   empty?: "required" | "dropzone";
   multiple?: boolean;
 }) {
@@ -189,9 +205,13 @@ export function UploadRow({
         variant="neutral"
         icon={<FileCheck size={20} />}
         title={title}
-        description={`${doc.file} · ${doc.size} · Click to replace`}
-        trailing={<Chip tone="success">Uploaded</Chip>}
-        onPick={onPick}
+        description={`${doc.file} · ${doc.size}`}
+        trailing={
+          <span className="flex shrink-0 items-center gap-3">
+            <Chip tone="success">Uploaded</Chip>
+            <RemoveFile name={doc.file} onRemove={onRemove} />
+          </span>
+        }
       />
     );
   if (doc.status === "error") return <DocRow variant="error" title={title} description={`${doc.note} Click to upload again.`} onPick={onPick} />;

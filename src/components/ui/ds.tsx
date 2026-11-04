@@ -575,7 +575,7 @@ export function OptionRow({
         />
         <span
           className={cx(
-            "flex size-10 shrink-0 items-center justify-center rounded-[10px]",
+            "flex size-10 shrink-0 items-center justify-center rounded-full",
             checked ? "bg-brand text-white" : "bg-surface text-ink-2",
           )}
         >
@@ -690,15 +690,15 @@ export function DocRow({
   );
   const tile =
     variant === "error" ? (
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-error-strong text-white">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-error-strong text-white">
         <TriangleAlert size={20} />
       </span>
     ) : variant === "dropzone" ? (
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-container text-ink">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-container text-ink">
         <Upload size={20} />
       </span>
     ) : (
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-surface text-ink-2">{icon}</span>
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-ink-2">{icon}</span>
     );
   const body = (
     <>

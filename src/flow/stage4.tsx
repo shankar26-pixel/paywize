@@ -6,7 +6,7 @@ import { Page } from "@/components/shell";
 import { IFSC_BANKS } from "./data";
 import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
 import { ProcessView, ResultIcon } from "./process";
-import type { FlowState } from "./state";
+import { MISSING, type FlowState } from "./state";
 
 const IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
@@ -221,6 +221,7 @@ export function UploadBankProof({ s, go, update }: Ctx) {
         hint="PDF, JPG or PNG up to 5 MB. Statement from the last 3 months."
         doc={d}
         onPick={(files) => startUpload(files[0], (bankProof) => update(() => ({ bankProof })))}
+        onRemove={() => update(() => ({ bankProof: MISSING }))}
       />
       <Actions actions={[{ label: "Submit for review", disabled: d.status !== "uploaded", onClick: () => go("4.1.4") }]} />
     </Page>

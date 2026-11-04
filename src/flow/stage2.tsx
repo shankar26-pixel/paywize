@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Alert,
   Button,
@@ -15,11 +15,12 @@ import {
   OptionRow,
   Select,
   SummaryTable,
+  initials,
 } from "@/components/ui/ds";
-import { Building, CheckBadge, FileCheck, FileText, Globe, IdCard, Briefcase, ShieldCheck, Smartphone } from "@/components/ui/icons";
+import { ArrowDown, Building, CheckBadge, FileCheck, FileText, Globe, IdCard, Briefcase, ShieldCheck, Smartphone } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { LINES_OF_BUSINESS, LOB_DOC, PAN_ERRORS, PAN_PATTERN, lookupPan, requiredDocs, type DocSpec } from "./data";
-import { Actions, StatusScreen, UploadRow, acceptFile, startUpload, supportMail, useFilePicker, type Ctx } from "./common";
+import { Actions, RemoveFile, StatusScreen, UploadRow, acceptFile, startUpload, supportMail, useFilePicker, type Ctx } from "./common";
 import { MISSING, initialState, type DocState } from "./state";
 import { PanCard } from "./PanCard";
 import { ProcessView, ScanArt } from "./process";
@@ -185,43 +186,109 @@ export function PanEntry({ s, set, go, toast }: Ctx) {
   );
 }
 
-/* ───────────── 2.1A Confirm company (popup) ───────────── */
+/* ───────────── 2.1 Confirm details (popups) ───────────── */
+
+/** Shows what we found under the PAN, the account it links to, and what confirming means. */
+function ConfirmPopup({
+  s,
+  title,
+  type,
+  facts,
+  children,
+  disabled,
+  onBack,
+  onConfirm,
+}: {
+  s: Ctx["s"];
+  title: string;
+  type: string;
+  facts: string[];
+  children?: ReactNode;
+  disabled?: boolean;
+  onBack: () => void;
+  onConfirm: () => void;
+}) {
+  const name = s.record?.displayName ?? "";
+  return (
+    <Modal open bare label={title} onClose={onBack}>
+      <div className="-m-[18px] flex flex-col">
+        <h2 className="t-18s border-b border-line-2 px-6 py-4 text-ink">{title}</h2>
+        <div className="flex flex-col gap-4 p-6">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-3">
+              <span className="t-14s flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-white">{initials(name)}</span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="t-14s text-ink">{name}</span>
+                <span className="t-12r text-ink-2">
+                  {type} · PAN {s.pan}
+                </span>
+              </span>
+            </div>
+            <span className="flex w-11 justify-center text-ink-2" aria-hidden="true">
+              <ArrowDown size={16} />
+            </span>
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/figma/auth/mark.svg" alt="" className="size-11 shrink-0" />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="t-14s text-ink">Your Paywize account</span>
+                {s.email && <span className="t-12r truncate text-ink-2">{s.email}</span>}
+              </span>
+            </div>
+          </div>
+          <p className="t-14s text-ink">We will use these details for your KYC and merchant agreement.</p>
+          <ul className="flex list-disc flex-col gap-1.5 pl-5 text-ink-2 marker:text-ink-3">
+            {facts.map((fact) => (
+              <li key={fact} className="t-12r">
+                {fact}
+              </li>
+            ))}
+          </ul>
+          {children}
+          <Alert tone="warning" dismissible={false}>
+            If anything looks wrong, go back and check your PAN. Incorrect details can delay your verification.
+          </Alert>
+          <div className="flex items-center justify-end gap-3 pt-1">
+            <Button variant="secondary" onClick={onBack}>
+              Back
+            </Button>
+            <Button disabled={disabled} onClick={onConfirm}>
+              Confirm details
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 export function ConfirmCompanyModal({ s, set, go, toast }: Ctx) {
   const rec = s.record;
   if (!rec) return null;
   const kind = rec.entity === "llp" ? "LLP" : rec.entity === "firm" ? "firm" : "company";
-  const rows = [
-    { label: "Legal name", value: rec.displayName },
-    ...(rec.entity === "company" ? [{ label: "CIN", value: s.reg }] : []),
-    ...(rec.entity === "llp" ? [{ label: "LLPIN", value: s.reg }] : []),
-    ...(rec.entity === "firm" ? [{ label: "GSTIN", value: s.gst }] : []),
-    { label: rec.entity === "firm" ? "Date of registration" : "Date of incorporation", value: rec.incorporated ?? "" },
-    { label: "Registered office", value: rec.office ?? "" },
+  const source = rec.entity === "firm" ? "PAN and GST records" : "MCA records";
+  const facts = [
+    ...(rec.entity === "company" ? [`CIN: ${s.reg}`] : []),
+    ...(rec.entity === "llp" ? [`LLPIN: ${s.reg}`] : []),
+    ...(rec.entity === "firm" ? [`GSTIN: ${s.gst}`] : []),
+    `${rec.entity === "firm" ? "Registered" : "Incorporated"} on ${rec.incorporated ?? ""}`,
+    `Registered office: ${rec.office ?? ""}`,
+    `Fetched from ${source}, so these details cannot be edited here`,
   ];
   return (
-    <Modal open label={`Confirm your ${kind}`} onClose={() => set({ modal: null })}>
-      <ModalHeader
-        large
-        chip="Fetched from your PAN"
-        title={`Confirm your ${kind}`}
-        subtitle={rec.entity === "firm" ? "Read-only. Fetched from PAN and GST records." : "Read-only. Fetched from MCA records."}
-      />
-      <SummaryTable rows={rows} />
-      <Button
-        full
-        onClick={() => {
-          go("2.2A", { modal: null });
-          toast(`${kind[0].toUpperCase()}${kind.slice(1)} details confirmed`, "Next, add your documents.");
-        }}
-      >
-        I acknowledge
-      </Button>
-    </Modal>
+    <ConfirmPopup
+      s={s}
+      title={`Confirm your ${kind}`}
+      type={`${kind[0].toUpperCase()}${kind.slice(1)}`}
+      facts={facts}
+      onBack={() => set({ modal: null })}
+      onConfirm={() => {
+        go("2.2A", { modal: null });
+        toast(`${kind[0].toUpperCase()}${kind.slice(1)} details confirmed`, "Next, add your documents.");
+      }}
+    />
   );
 }
-
-/* ───────────── 2.1B Confirm individual details (popup) ───────────── */
 
 export function ConfirmIndividualModal({ s, set, go, toast }: Ctx) {
   const rec = s.record;
@@ -230,29 +297,18 @@ export function ConfirmIndividualModal({ s, set, go, toast }: Ctx) {
   const gst = rec.gsts[0]?.value;
   const mismatch = s.nameMismatch && s.signupName.trim().toLowerCase() !== rec.displayName.toLowerCase();
   return (
-    <Modal open label="Confirm your details" onClose={() => set({ modal: null })}>
-      <ModalHeader
-        large
-        chip="Fetched from your PAN"
-        title="Confirm your details"
-        subtitle="Matched with NSDL. Company records are not needed."
-      />
-      <SummaryTable
-        rows={[
-          { label: "Legal name", value: rec.displayName },
-          { label: "Date of birth", value: rec.dob ?? "" },
-          {
-            label: "PAN status",
-            value: (
-              <span className="flex items-center gap-2">
-                <CheckBadge />
-                Active
-              </span>
-            ),
-          },
-          { label: "Source", value: "NSDL and Income Tax records" },
-        ]}
-      />
+    <ConfirmPopup
+      s={s}
+      title="Confirm your details"
+      type="Individual"
+      facts={[`Date of birth: ${rec.dob ?? ""}`, "PAN is active and matched with NSDL and Income Tax records", "Company records are not needed"]}
+      disabled={mismatch}
+      onBack={() => set({ modal: null })}
+      onConfirm={() => {
+        go("2.2B", { modal: null, gst: s.includeGst ? (gst ?? "") : "" });
+        toast("Identity confirmed", "Next, verify your address.");
+      }}
+    >
       {mismatch && (
         <>
           <Alert tone="warning" title="Your name does not match your PAN" dismissible={false}>
@@ -272,20 +328,10 @@ export function ConfirmIndividualModal({ s, set, go, toast }: Ctx) {
       )}
       {gst && (
         <Checkbox checked={s.includeGst} onChange={(includeGst) => set({ includeGst, gst: includeGst ? gst : "" })}>
-          Include GSTIN {gst} found under this PAN (optional)
+          <span className="t-14s">Include GSTIN {gst} found under this PAN (optional)</span>
         </Checkbox>
       )}
-      <Button
-        full
-        disabled={mismatch}
-        onClick={() => {
-          go("2.2B", { modal: null, gst: s.includeGst ? (gst ?? "") : "" });
-          toast("Identity confirmed", "Next, verify your address.");
-        }}
-      >
-        I acknowledge
-      </Button>
-    </Modal>
+    </ConfirmPopup>
   );
 }
 
@@ -417,7 +463,17 @@ export function MandatoryDocs({ s, set, go, update, toast }: Ctx) {
       : entity === "firm"
         ? "Two documents for every firm. More depend on what you sell."
         : "Two documents for every company. More depend on what you sell.";
-  const row = (d: DocSpec) => <UploadRow key={d.key} title={d.title} hint={d.hint} doc={doc(d.key)} onPick={pick(d.key)} empty="required" />;
+  const row = (d: DocSpec) => (
+    <UploadRow
+      key={d.key}
+      title={d.title}
+      hint={d.hint}
+      doc={doc(d.key)}
+      onPick={pick(d.key)}
+      onRemove={() => update((p) => ({ docs: { ...p.docs, [d.key]: MISSING } }))}
+      empty="required"
+    />
+  );
 
   return (
     <Page title="Add the mandatory documents" subtitle={subtitle}>
@@ -541,16 +597,16 @@ export function AddressMethod({ s, set, go }: Ctx) {
 
 export function DigiLockerConsent({ go }: Ctx) {
   return (
-    <Page title="Share your address securely" subtitle="You will sign in to DigiLocker and approve what we see.">
+    <Page title="Share your address securely" subtitle="Sign in to DigiLocker and approve the details shared with Paywize.">
       <SummaryTable
         rows={[
-          { label: "We receive", value: "Name, date of birth and address" },
-          { label: "We never see", value: "Your Aadhaar number" },
+          { label: "Details shared", value: "Name, date of birth and address" },
+          { label: "Not shared", value: "Your full Aadhaar number" },
         ]}
       />
       <p className="t-12r flex items-center gap-2 text-ink-2">
         <ShieldCheck size={16} />
-        Government-run and consent-based. You can revoke access in DigiLocker any time.
+        DigiLocker is a Government of India service. You can revoke access from your DigiLocker account at any time.
       </p>
       <Actions actions={[{ label: "Continue to DigiLocker", onClick: () => go("2.2B.F") }]} />
     </Page>
@@ -597,12 +653,13 @@ export function DigiLockerFailed({ go }: Ctx) {
 export function UploadAddressDoc({ s, go, update }: Ctx) {
   const pick = (k: "front" | "back") => (files: File[]) =>
     startUpload(files[0], (d) => update((p) => ({ addrDocs: { ...p.addrDocs, [k]: d } })));
+  const remove = (k: "front" | "back") => () => update((p) => ({ addrDocs: { ...p.addrDocs, [k]: MISSING } }));
   const ready = s.addrDocs.front?.status === "uploaded" && s.addrDocs.back?.status === "uploaded";
   const hint = "PDF, JPG or PNG up to 5 MB. Make sure all four corners are visible.";
   return (
     <Page title="Upload your document" subtitle="Passport, driving licence or voter ID.">
-      <UploadRow title="Front of the document" hint={hint} doc={s.addrDocs.front ?? MISSING} onPick={pick("front")} />
-      <UploadRow title="Back of the document" hint={hint} doc={s.addrDocs.back ?? MISSING} onPick={pick("back")} />
+      <UploadRow title="Front of the document" hint={hint} doc={s.addrDocs.front ?? MISSING} onPick={pick("front")} onRemove={remove("front")} />
+      <UploadRow title="Back of the document" hint={hint} doc={s.addrDocs.back ?? MISSING} onPick={pick("back")} onRemove={remove("back")} />
       <Actions actions={[{ label: "Continue", disabled: !ready, onClick: () => go("2.2B.3") }]} />
     </Page>
   );
@@ -680,6 +737,8 @@ export function PortfolioLink({ s, set, go }: Ctx) {
   );
 }
 
+const MAX_PROOFS = 3;
+
 export function EngagementProof({ s, set, go }: Ctx) {
   const [files, setFiles] = useState<DocState[]>(s.engagement.status === "uploaded" ? [s.engagement] : []);
   const heading =
@@ -688,13 +747,20 @@ export function EngagementProof({ s, set, go }: Ctx) {
       : s.proof === "professional"
         ? ["Upload your registration", "Your council or institute membership certificate."]
         : ["Upload your engagement proof", "An agreement, work order or recent invoices."];
-  const add = (list: File[]) => {
-    const next = [...files, ...list.map(acceptFile)].slice(-3);
+  const firstDoc =
+    s.proof === "udyam"
+      ? ["Upload your Udyam certificate", "PDF, JPG or PNG up to 5 MB"]
+      : s.proof === "professional"
+        ? ["Upload your registration certificate", "PDF, JPG or PNG up to 5 MB"]
+        : ["Upload your agreement, work order or invoice", "PDF, JPG or PNG up to 5 MB"];
+  const save = (next: DocState[]) => {
     setFiles(next);
-    const firstOk = next.find((f) => f.status === "uploaded");
-    if (firstOk) set({ engagement: firstOk });
+    set({ engagement: next.find((f) => f.status === "uploaded") ?? MISSING });
   };
+  const add = (list: File[]) => save([...files, ...list.map(acceptFile)].slice(0, MAX_PROOFS));
+  const remove = (i: number) => save(files.filter((_, n) => n !== i));
   const ok = files.some((f) => f.status === "uploaded");
+  const left = MAX_PROOFS - files.length;
   return (
     <Page title={heading[0]} subtitle={heading[1]}>
       {files.map((f, i) =>
@@ -705,14 +771,25 @@ export function EngagementProof({ s, set, go }: Ctx) {
             icon={<FileCheck size={20} />}
             title={f.file!}
             description={f.size}
-            trailing={<Chip tone="success">Uploaded</Chip>}
+            trailing={
+              <span className="flex shrink-0 items-center gap-3">
+                <Chip tone="success">Uploaded</Chip>
+                <RemoveFile name={f.file} onRemove={() => remove(i)} />
+              </span>
+            }
           />
         ) : (
-          <DocRow key={i} variant="error" title="File not added" description={f.note} />
+          <DocRow key={i} variant="error" title="File not added" description={f.note} trailing={<RemoveFile onRemove={() => remove(i)} />} />
         ),
       )}
-      {files.length < 3 && (
-        <DocRow variant="dropzone" title="Drag files here or browse" description="Up to 3 files, 5 MB each" multiple onPick={add} />
+      {left > 0 && (
+        <DocRow
+          variant="dropzone"
+          title={files.length ? "Add other supporting documents (optional)" : firstDoc[0]}
+          description={files.length ? `Up to ${left} more ${left === 1 ? "file" : "files"}. PDF, JPG or PNG up to 5 MB each` : firstDoc[1]}
+          multiple
+          onPick={add}
+        />
       )}
       <Actions actions={[{ label: "Continue", disabled: !ok, onClick: () => go("3.0.2") }]} />
     </Page>

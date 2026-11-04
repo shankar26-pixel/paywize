@@ -5,7 +5,7 @@ import { AlertBadge, CheckBadge, FileCheck, Globe, LinkIcon, QrCode, Smartphone 
 import { Page } from "@/components/shell";
 import { POLICIES } from "./data";
 import { Actions, UploadRow, startUpload, type Ctx } from "./common";
-import type { Collection } from "./state";
+import { MISSING, type Collection } from "./state";
 import { ResultIcon } from "./process";
 
 const METHODS: { value: Collection; title: string; desc: string; icon: React.ReactNode }[] = [
@@ -74,6 +74,7 @@ export function CollectionMethod({ s, set, go, update }: Ctx) {
           hint="Helps us confirm what you sell. PDF, JPG or PNG up to 5 MB"
           doc={inv}
           onPick={pickInvoice}
+          onRemove={() => update(() => ({ invoice: MISSING }))}
         />
       </>
     ),
