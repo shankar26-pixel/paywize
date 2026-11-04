@@ -408,7 +408,7 @@ export const SCREENS: { stage: string; items: [string, string][] }[] = [
     stage: "Stage 3 · Stakeholders, CKYC, PEP",
     items: [
       ["3.0", "Key persons"],
-      ["3.0.1", "Invite a beneficial owner"],
+      ["3.0.1", "Add a director"],
       ["3.0.2", "Individual applicant"],
       ["3.0.E1", "No one selected"],
       ["3.0.E2", "Director flagged"],

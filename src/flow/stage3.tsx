@@ -50,7 +50,7 @@ export function KeyPersons({ s, set, go }: Ctx) {
       </fieldset>
       <div>
         <Button variant="secondary" size="sm" icon={<CirclePlus size={16} />} onClick={() => set({ modal: "invite" })}>
-          Invite a beneficial owner
+          Add directors
         </Button>
       </div>
       <p className="t-12r text-ink-2">By continuing, you consent to Paywize fetching your KYC record from the CKYC registry.</p>
@@ -82,14 +82,14 @@ export function InviteModal({ s, set, toast }: Ctx) {
     setTimeout(() => {
       set({
         modal: null,
-        people: [...s.people, { id: `inv-${Date.now()}`, name: f.name.trim(), role: "Beneficial owner · Invite sent", invited: true }],
+        people: [...s.people, { id: `inv-${Date.now()}`, name: f.name.trim(), role: "Director · Invite sent", invited: true }],
       });
       toast(`Invite sent to ${f.name.trim().split(" ")[0]}`, `By SMS to +91 ${f.mobile.slice(0, 2)}••••${f.mobile.slice(-2)} and by email.`);
     }, 900);
   };
   return (
-    <Modal open label="Add a beneficial owner" onClose={() => set({ modal: null })}>
-      <ModalHeader title="Add a beneficial owner" subtitle="We will text and email them a secure link to complete their own KYC." />
+    <Modal open label="Add a director" onClose={() => set({ modal: null })}>
+      <ModalHeader title="Add a director" subtitle="We will text and email them a secure link to complete their own KYC." />
       <ModalArt src="/figma/art-ubo.png" />
       <Input label="Full name" value={f.name} onChange={(name) => setF({ ...f, name })} placeholder="Enter full name" />
       <div className="flex flex-col gap-3 sm:flex-row">

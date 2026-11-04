@@ -136,7 +136,6 @@ function loadSaved(): FlowState | null {
 export default function Onboarding() {
   const [s, setS] = useState<FlowState>(initialState);
   const [indexOpen, setIndexOpen] = useState(false);
-  const [dir, setDir] = useState<"forward" | "back">("forward");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const ready = useRef(false);
   // The server cannot know the ?screen= link or saved progress, so draw nothing until we do; otherwise every reload flashes sign up.
@@ -184,15 +183,12 @@ export default function Onboarding() {
       toast,
       update: (fn) => setS((p) => ({ ...p, ...fn(p) })),
       go: (screen, patch) => {
-        setDir("forward");
         setS((p) => ({ ...p, ...patch, screen, history: [...p.history, p.screen] }));
       },
       replace: (screen, patch) => {
-        setDir("forward");
         setS((p) => ({ ...p, ...patch, screen }));
       },
       back: () => {
-        setDir("back");
         setS((p) =>
           p.modal
             ? { ...p, modal: null }
@@ -211,7 +207,6 @@ export default function Onboarding() {
   const step = stepOf(s.screen);
 
   const jump = (id: string) => {
-    setDir("forward");
     setS(presetFor(id));
     setIndexOpen(false);
     const url = new URL(window.location.href);
@@ -243,7 +238,6 @@ export default function Onboarding() {
               localStorage.removeItem(SAVE_KEY);
             } catch {}
             window.history.replaceState(null, "", window.location.pathname);
-            setDir("back");
             setS({ ...initialState(), screen: "2.0", email: s.email, mobile: s.mobile, signerRole: s.signerRole, isSignatory: s.isSignatory });
             toast("Started over", "Your earlier answers were cleared.");
           }}
@@ -255,7 +249,7 @@ export default function Onboarding() {
           onExplore={s.screen === "4.1" ? undefined : () => ctx.go("8.0")}
         />
         <main className="flex flex-1 flex-col items-center px-4 pt-9 pb-24">
-          <div key={s.screen} className={cx("flex w-full justify-center", dir === "back" ? "anim-back" : "anim-forward")}>
+          <div key={s.screen} className="anim-step flex w-full justify-center">
             <Screen {...ctx} />
           </div>
         </main>
