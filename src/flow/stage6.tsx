@@ -372,7 +372,7 @@ export function Submitted({ go }: Ctx) {
       subtitle="We will update you here and by email."
       detail="Reference ID PWZ-2026-48213"
       copy="PWZ-2026-48213"
-      action={{ label: "Go to dashboard", onClick: () => go("6.7") }}
+      action={{ label: "Go to dashboard", onClick: () => go("6.5") }}
     />
   );
 }
@@ -385,7 +385,7 @@ export function AdditionalVerification({ go }: Ctx) {
       tone="info"
       alertTitle="Additional verification in progress"
       alertText="No action is needed from you right now. We will email you within 2 business days."
-      actions={[{ label: "Go to dashboard", onClick: () => go("6.7") }]}
+      actions={[{ label: "Go to dashboard", onClick: () => go("6.5") }]}
     />
   );
 }
@@ -417,15 +417,15 @@ function AlertSlim({ children }: { children: React.ReactNode }) {
 
 
 
-export function CpvMissed({ go }: Ctx) {
+export function CpvNotCompleted({ go }: Ctx) {
   return (
     <StatusScreen
-      title="We missed you"
-      subtitle="Your verification slot has passed."
+      title="We could not complete your business verification"
+      subtitle="We were unable to finish this check."
       tone="warning"
-      alertTitle="Verification not completed"
-      alertText="Book a new slot within 7 days to keep your application active."
-      actions={[{ label: "Rebook", onClick: () => go("6.5") }]}
+      alertTitle="Full access is on hold"
+      alertText="Our team will email you with what is needed. You do not need to do anything until then."
+      actions={[{ label: "Go to dashboard", onClick: () => go("6.5") }]}
     />
   );
 }
@@ -461,10 +461,10 @@ export function Approved({ go }: Ctx) {
     <SuccessScreen
       confetti
       title="You are approved"
-      subtitle="Everything checks out. Start with test payments; live collection opens after 10 of them."
+      subtitle="Your business verification is complete. Start with test payments; live collection opens after 10 of them."
       detail="Reference ID PWZ-2026-48213"
       copy="PWZ-2026-48213"
-      action={{ label: "Go to sandbox", onClick: () => go("8.0") }}
+      action={{ label: "Go to sandbox", onClick: () => go("8.0", { limited: false }) }}
     />
   );
 }

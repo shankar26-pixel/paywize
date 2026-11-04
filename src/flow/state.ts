@@ -29,6 +29,18 @@ export type FlowState = {
   history: string[];
   modal: Modal;
 
+  // Sign up and sign in (passwords are never kept here)
+  email: string;
+  mobile: string;
+  /** The person filling in the application: owner, director, ceo, cfo, accountant or employee. */
+  signerRole: string;
+  /** False when someone else must do eSign and face verification for the business. */
+  isSignatory: boolean;
+  /** Screen to return to after signing back in. */
+  resume: string;
+  /** Opens a code or password screen in this state, for the screen index. */
+  authCode: "" | "verified" | "expired" | "incorrect";
+
   // Stage 2
   pan: string;
   panError: "" | "E1" | "E2" | "E3";
@@ -83,9 +95,16 @@ export type FlowState = {
 
   // Stage 6–8
   confirm: boolean;
-  cpvMode: "video" | "visit";
-  cpvDay: string;
-  cpvTime: string;
+  /** Failed face checks in the current 24 hours; 3 locks retries until faceLockUntil. */
+  faceFails: number;
+  faceLockUntil: number;
+  /** Demo: the selfie check fails, so the fallbacks can be walked through. */
+  faceFail: boolean;
+  facePhotos: { left: DocState; right: DocState; front: DocState };
+  /** Who got the face verification link, when the applicant is not the signatory. */
+  faceLink: { name: string; mobile: string };
+  /** Transacting under limits while CPV is processed. */
+  limited: boolean;
   signed: boolean[];
   signing: number;
   tests: number;
@@ -97,9 +116,15 @@ export const MISSING: DocState = { status: "missing" };
 
 export function initialState(): FlowState {
   return {
-    screen: "2.0",
+    screen: "S.1",
     history: [],
     modal: null,
+    email: "",
+    mobile: "",
+    signerRole: "",
+    isSignatory: true,
+    resume: "",
+    authCode: "",
     pan: "",
     panError: "",
     record: null,
@@ -148,9 +173,12 @@ export function initialState(): FlowState {
     grievanceEmail: "",
     grievanceError: false,
     confirm: false,
-    cpvMode: "video",
-    cpvDay: "",
-    cpvTime: "",
+    faceFails: 0,
+    faceLockUntil: 0,
+    faceFail: false,
+    facePhotos: { left: MISSING, right: MISSING, front: MISSING },
+    faceLink: { name: "", mobile: "" },
+    limited: false,
     signed: [false, false, false],
     signing: 0,
     tests: 4,
@@ -210,13 +238,12 @@ const PROGRESS: Record<string, number> = {
   "6.8": 5.05,
   "6.8.1": 5.12,
   "6.8.2": 5.2,
-  "6.5": 5.3,
-  "6.6": 5.4,
-  "6.1": 5.5,
-  "6.2": 5.55,
-  "6.3": 5.55,
-  "6.4": 5.55,
-  "6.E": 5.55,
+  "6.1": 5.3,
+  "6.2": 5.4,
+  "6.3": 5.4,
+  "6.4": 5.4,
+  "6.E": 5.4,
+  "6.5": 5.5,
   "6.7": 5.6,
   "8.0": 5.7,
   "8.1": 5.8,
@@ -262,16 +289,19 @@ const PARENT: Record<string, string> = {
   "6.8.1": "6.8",
   "6.8.2": "6.8.1",
   "6.8.E": "6.8",
-  "6.5": "6.8",
-  "6.6": "6.5",
-  "6.1": "6.6",
+  "6.8.L": "7.3",
+  "6.8.W": "6.8.L",
+  "6.8.E3": "6.8",
+  "6.8.U": "6.8.E3",
+  "6.1": "6.8",
   "6.2": "6.1",
   "6.3": "6.2",
   "6.4": "6.2",
   "6.E": "6.2",
-  "6.E2": "6.6",
-  "6.7": "6.2",
-  "8.0": "6.7",
+  "6.5": "6.2",
+  "6.E2": "6.5",
+  "6.7": "6.5",
+  "8.0": "6.5",
   "8.1": "8.0",
   "8.2": "8.1",
   "8.3": "8.2",
@@ -297,6 +327,36 @@ export function progressOf(screen: string): number {
 }
 
 export const SCREENS: { stage: string; items: [string, string][] }[] = [
+  {
+    stage: "Sign up",
+    items: [
+      ["S.1", "Work email"],
+      ["S.2", "Email code"],
+      ["S.2.V", "Email code: verified"],
+      ["S.2.E1", "Email code: expired"],
+      ["S.2.E2", "Email code: incorrect"],
+      ["S.3", "Mobile number"],
+      ["S.4", "Mobile code"],
+      ["S.4.V", "Mobile code: verified"],
+      ["S.4.E1", "Mobile code: expired"],
+      ["S.4.E2", "Mobile code: incorrect"],
+      ["S.5", "Create a password"],
+      ["S.5.E", "Password mismatch"],
+      ["S.6", "Who is signing up?"],
+    ],
+  },
+  {
+    stage: "Sign in",
+    items: [
+      ["I.1", "Sign in"],
+      ["I.2", "Verify it's you"],
+      ["I.2.V", "Verify it's you: verified"],
+      ["F.1", "Forgot password"],
+      ["F.2", "Reset code"],
+      ["F.2.V", "Reset code: verified"],
+      ["F.3", "Set a new password"],
+    ],
+  },
   {
     stage: "Stage 2 · PAN, GST and CIN",
     items: [
@@ -411,16 +471,18 @@ export const SCREENS: { stage: string; items: [string, string][] }[] = [
     ],
   },
   {
-    stage: "Stage 7 · Face and CPV verification",
+    stage: "Stage 7 · Face verification",
     items: [
       ["6.8", "Face verification: tips"],
       ["6.8.1", "Live selfie with prompts"],
       ["6.8.2", "Checking the selfie"],
+      ["6.8.2.F", "Checking the selfie: fails"],
       ["6.8.E1", "Camera blocked"],
-      ["6.8.E2", "Face did not match"],
-      ["6.5", "Book CPV (video call or visit)"],
-      ["6.6", "CPV slot confirmed"],
-      ["6.E2", "CPV missed"],
+      ["6.8.E2", "Face did not match (attempts left)"],
+      ["6.8.E3", "Attempts used: retry after 24 hours"],
+      ["6.8.U", "Upload left, right and straight photos"],
+      ["6.8.L", "Not the signatory: share the link"],
+      ["6.8.W", "Waiting for the signatory"],
     ],
   },
   {
@@ -432,6 +494,8 @@ export const SCREENS: { stage: string; items: [string, string][] }[] = [
       ["6.4", "Document deficiency"],
       ["6.E3", "Unable to proceed"],
       ["6.E4", "Application rejected"],
+      ["6.5", "CPV processing"],
+      ["6.E2", "CPV could not be completed"],
       ["6.7", "Approved"],
     ],
   },
@@ -633,10 +697,40 @@ export function presetFor(id: string): FlowState {
       return go("6.0", { modal: "edit-bank" });
     case "6.0.5":
       return go("6.0", { modal: "edit-storefront" });
-    case "6.6":
-      return go("6.6", { cpvMode: "video", cpvDay: "Tomorrow", cpvTime: "11:00 AM" });
     case "6.5":
-      return go("6.5", { cpvDay: "", cpvTime: "" });
+      return go("6.5", { limited: false, tests: 0, today: 0, live: 0 });
+    case "6.8.2.F":
+      return go("6.8.2", { faceFail: true });
+    case "6.8.E2":
+      return go("6.8.E2", { faceFail: true, faceFails: 1 });
+    case "6.8.E3":
+      return go("6.8.E3", { faceFails: 3, faceLockUntil: Date.now() + 24 * 3600 * 1000 });
+    case "6.8.U":
+      return go("6.8.U", { faceFails: 3, faceLockUntil: Date.now() + 24 * 3600 * 1000 });
+    case "6.8.L":
+      return go("6.8.L", { signerRole: "accountant", isSignatory: false });
+    case "6.8.W":
+      return go("6.8.W", { signerRole: "accountant", isSignatory: false, faceLink: { name: "Sana Kapoor", mobile: "9876543210" } });
+    case "S.2":
+    case "S.4":
+    case "I.2":
+    case "F.2":
+      return go(id, { email: "name@company.com", mobile: "9876543210", authCode: "" });
+    case "S.2.V":
+    case "S.2.E1":
+    case "S.2.E2":
+    case "S.4.V":
+    case "S.4.E1":
+    case "S.4.E2":
+    case "I.2.V":
+    case "F.2.V": {
+      const state = id.endsWith("V") ? "verified" : id.endsWith("E1") ? "expired" : "incorrect";
+      return go(id.slice(0, 3), { email: "name@company.com", mobile: "9876543210", authCode: state });
+    }
+    case "S.5.E":
+      return go("S.5", { authCode: "incorrect" });
+    case "S.6":
+      return go("S.6", { signerRole: "", authCode: "" });
     case "7.0":
       return go("7.0", { signed: [false, false, false] });
     case "7.1":

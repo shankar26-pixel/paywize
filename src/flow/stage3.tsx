@@ -53,6 +53,7 @@ export function KeyPersons({ s, set, go }: Ctx) {
           Invite a beneficial owner
         </Button>
       </div>
+      <p className="t-12r text-ink-2">By continuing, you consent to Paywize fetching your KYC record from the CKYC registry.</p>
       <Actions
         actions={[
           {
@@ -127,6 +128,7 @@ export function IndividualApplicant({ s, go }: Ctx) {
   return (
     <Page title="You are the only owner" subtitle="For individuals and freelancers, this is you at 100%.">
       <PersonRow name={s.record?.displayName ?? "Rohit Sharma"} role="Applicant · proprietor" />
+      <p className="t-12r text-ink-2">By continuing, you consent to Paywize fetching your KYC record from the CKYC registry.</p>
       <Actions actions={[{ label: "Continue", onClick: () => go("3.1") }]} />
     </Page>
   );

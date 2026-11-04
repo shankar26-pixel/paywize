@@ -913,11 +913,15 @@ export function OtpInput({
   value,
   onChange,
   error,
+  success,
+  size = "md",
 }: {
   length?: number;
   value: string;
   onChange: (v: string) => void;
   error?: boolean;
+  success?: boolean;
+  size?: "md" | "sm";
 }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   // Back to the first cell whenever the code is cleared: a wrong code, a resend, the next document.
@@ -958,8 +962,9 @@ export function OtpInput({
             if (e.key === "Backspace" && !value[i]?.trim()) refs.current[i - 1]?.focus();
           }}
           className={cx(
-            "t-16s h-[70px] w-full min-w-0 rounded-xl border text-center text-ink outline-none focus:border-2 focus:border-brand",
-            error ? "border-error bg-error-container" : "border-line bg-surface",
+            "t-16s min-w-0 rounded-xl border text-center text-ink outline-none focus:border-2 focus:border-brand",
+            size === "sm" ? "h-[52px] w-11 shrink-0" : "h-[70px] w-full",
+            error ? "border-error bg-error-container" : success ? "border-success bg-success-container" : "border-line bg-surface",
           )}
         />
       ))}

@@ -212,6 +212,32 @@ body {
 .anim-pop { animation: pop-in 200ms ease-out both; }
 .anim-scan { animation: scan 1.6s ease-in-out infinite; }
 
+/* The verification pass drops in on its cord; the swing is a pendulum in usePendulum. */
+.anim-pass {
+  rotate: -5deg;
+  animation: pass-drop 650ms cubic-bezier(0.3, 1.25, 0.5, 1) both;
+}
+@media (max-width: 767px) {
+  .anim-pass { animation: none; }
+}
+@keyframes pass-drop {
+  from { translate: 0 -640px; }
+  to { translate: 0 0; }
+}
+
+/* The testimonial loader on sign up and sign in; pauses while the pointer is on the panel. */
+.anim-ring-load {
+  stroke-dasharray: 100;
+  animation: ring-load 6s linear both;
+}
+.group:hover .anim-ring-load {
+  animation-play-state: paused;
+}
+@keyframes ring-load {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .anim-fade-up, .anim-pop, .anim-scan { animation: none; }
 }
@@ -266,8 +292,9 @@ body {
 .anim-fill { animation: fill-bar 1300ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-scanline, .anim-burst, .anim-ring, .anim-draw, .anim-confetti, .anim-forward, .anim-back, .anim-toast, .anim-fill {
+  .anim-scanline, .anim-burst, .anim-ring, .anim-draw, .anim-confetti, .anim-forward, .anim-back, .anim-toast, .anim-fill, .anim-ring-load, .anim-pass {
     animation: none;
   }
+  .anim-ring-load { stroke-dasharray: none; }
   .anim-draw { stroke-dasharray: none; }
 }

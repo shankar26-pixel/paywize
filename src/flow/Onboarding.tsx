@@ -11,8 +11,9 @@ import * as S5 from "./stage5";
 import * as S6 from "./stage6";
 import * as S78 from "./stage78";
 import * as V from "./verify";
+import * as A from "./auth";
 import { CircleCheck, LayoutList, X } from "@/components/ui/icons";
-import { Button, cx } from "@/components/ui/ds";
+import { cx } from "@/components/ui/ds";
 
 const ROUTES: Record<string, ComponentType<Ctx>> = {
   "2.0": S2.PanEntry,
@@ -61,14 +62,28 @@ const ROUTES: Record<string, ComponentType<Ctx>> = {
   "6.2": S6.Submitted,
   "6.3": S6.AdditionalVerification,
   "6.4": S6.DocumentDeficiency,
-  "6.5": V.CpvBook,
-  "6.6": V.CpvConfirmed,
+  "6.5": V.CpvProcessing,
   "6.8": V.FaceIntro,
   "6.8.1": V.FaceCapture,
   "6.8.2": V.FaceChecking,
   "6.8.E1": V.CameraBlocked,
   "6.8.E2": V.FaceNoMatch,
-  "6.E2": S6.CpvMissed,
+  "6.8.E3": V.FaceLocked,
+  "6.8.U": V.FacePhotos,
+  "6.8.L": V.FaceShare,
+  "6.8.W": V.FaceWaiting,
+  "6.E2": S6.CpvNotCompleted,
+  "S.1": A.SignupEmail,
+  "S.2": A.SignupEmailCode,
+  "S.3": A.SignupMobile,
+  "S.4": A.SignupMobileCode,
+  "S.5": A.SignupPassword,
+  "S.6": A.SignerRole,
+  "I.1": A.SignIn,
+  "I.2": A.SignInCode,
+  "F.1": A.ForgotPassword,
+  "F.2": A.ForgotCode,
+  "F.3": A.NewPassword,
   "6.E3": S6.UnableToProceed,
   "6.E4": S6.Rejected,
   "6.7": S6.Approved,
@@ -110,7 +125,9 @@ function loadSaved(): FlowState | null {
     if (!raw) return null;
     // An upload cut off by a reload never finished, so it comes back as not added.
     const json = JSON.stringify(JSON.parse(raw), (_, v) => (v && v.status === "uploading" ? { status: "missing" } : v));
-    return { ...initialState(), ...JSON.parse(json), modal: null };
+    const saved: FlowState = { ...initialState(), ...JSON.parse(json), modal: null };
+    // A slot booking saved by an older version now lands on the CPV status.
+    return saved.screen === "6.6" ? { ...saved, screen: "6.5" } : saved;
   } catch {
     return null;
   }
@@ -119,10 +136,11 @@ function loadSaved(): FlowState | null {
 export default function Onboarding() {
   const [s, setS] = useState<FlowState>(initialState);
   const [indexOpen, setIndexOpen] = useState(false);
-  const [signedOut, setSignedOut] = useState(false);
   const [dir, setDir] = useState<"forward" | "back">("forward");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const ready = useRef(false);
+  // The server cannot know the ?screen= link or saved progress, so draw nothing until we do; otherwise every reload flashes sign up.
+  const [loaded, setLoaded] = useState(false);
 
   // A ?screen= link shows that state; otherwise resume where the merchant left off.
   useEffect(() => {
@@ -132,6 +150,7 @@ export default function Onboarding() {
     if (id) setS(presetFor(id));
     else if (saved) setS(saved);
     ready.current = true;
+    setLoaded(true);
   }, []);
 
   // Autosave every change (popups are not restored).
@@ -200,42 +219,51 @@ export default function Onboarding() {
     window.history.replaceState(null, "", url);
   };
 
-  if (signedOut) return <SignedOut onLogin={() => setSignedOut(false)} />;
+  if (!loaded) return <div className="min-h-screen" />;
+
+  const isAuth = /^[SIF]\./.test(s.screen);
 
   return (
     <div className="relative isolate flex min-h-screen flex-col">
-      <Backdrop />
-      <TopBar
-        account={{ initials: "PN", name: s.record?.displayName ?? "Your business" }}
-        onLogout={() => {
-          set({ modal: null });
-          setIndexOpen(false);
-          setSignedOut(true);
-        }}
-        onStartOver={() => {
-          try {
-            localStorage.removeItem(SAVE_KEY);
-          } catch {}
-          window.history.replaceState(null, "", window.location.pathname);
-          setDir("back");
-          setS(initialState());
-          toast("Started over", "Your earlier answers were cleared.");
-        }}
-        step={step}
-        progress={progressOf(s.screen)}
-        done={s.screen === "8.3"}
-        canBack={s.history.length > 0 || !!s.modal || !!parentScreen(s.screen, s.record?.entity)}
-        onBack={ctx.back}
-        onExplore={s.screen === "4.1" ? undefined : () => ctx.go("8.0")}
-      />
-      <main className="flex flex-1 flex-col items-center px-4 pt-9 pb-24">
-        <div key={s.screen} className={cx("flex w-full justify-center", dir === "back" ? "anim-back" : "anim-forward")}>
-          <Screen {...ctx} />
+      {isAuth ? (
+        <A.AuthShell>
+          <Screen key={s.screen} {...ctx} />
+        </A.AuthShell>
+      ) : (
+        <>
+        <Backdrop />
+        <TopBar
+          account={{ initials: "PN", name: s.record?.displayName ?? "Your business" }}
+          onLogout={() => {
+            setIndexOpen(false);
+            ctx.replace("I.1", { resume: s.screen, modal: null, history: [] });
+          }}
+          onStartOver={() => {
+            try {
+              localStorage.removeItem(SAVE_KEY);
+            } catch {}
+            window.history.replaceState(null, "", window.location.pathname);
+            setDir("back");
+            setS({ ...initialState(), screen: "2.0", email: s.email, mobile: s.mobile, signerRole: s.signerRole, isSignatory: s.isSignatory });
+            toast("Started over", "Your earlier answers were cleared.");
+          }}
+          step={step}
+          progress={progressOf(s.screen)}
+          done={s.screen === "8.3"}
+          canBack={s.history.length > 0 || !!s.modal || !!parentScreen(s.screen, s.record?.entity)}
+          onBack={ctx.back}
+          onExplore={s.screen === "4.1" ? undefined : () => ctx.go("8.0")}
+        />
+        <main className="flex flex-1 flex-col items-center px-4 pt-9 pb-24">
+          <div key={s.screen} className={cx("flex w-full justify-center", dir === "back" ? "anim-back" : "anim-forward")}>
+            <Screen {...ctx} />
+          </div>
+        </main>
+        <div className="pointer-events-none fixed inset-x-0 bottom-9 -z-[1]">
+          <ProgressDots step={step} />
         </div>
-      </main>
-      <div className="pointer-events-none fixed inset-x-0 bottom-9 -z-[1]">
-        <ProgressDots step={step} />
-      </div>
+        </>
+      )}
       {ModalView && <ModalView key={s.modal} {...ctx} />}
 
       <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[70] flex flex-col items-center gap-2 px-4" aria-live="polite">
@@ -304,31 +332,11 @@ export default function Onboarding() {
             <p className="t-12r px-2 pt-2 pb-4 text-ink-3">
               Demo PANs: AAACN1234Q company (several GST, CIN) · AABCN1234M single GST and CIN · AAAFS5821K firm ·
               AAAFS6120M LLP · AKPPS4821R individual · AAACM1234D MCA down · AAACG1234N no GSTIN · AAACZ1234S struck off.
-              Bank: account ending 0000 fails the deposit, 1111 gives a name mismatch. eSign code 000000 is wrong.
+              Bank: account ending 0000 fails the deposit, 1111 gives a name mismatch. eSign code 000000 is wrong. Sign-up and sign-in codes: 000000 is wrong, 111111 has expired.
             </p>
           </div>
         </aside>
       )}
-    </div>
-  );
-}
-
-/** Shown after Log out. Progress stays in this tab, so logging back in resumes the same screen. */
-function SignedOut({ onLogin }: { onLogin: () => void }) {
-  return (
-    <div className="relative isolate flex min-h-screen flex-col items-center justify-center px-4">
-      <Backdrop />
-      <section className="anim-fade-up flex w-full max-w-[440px] flex-col items-center gap-5 rounded-[28px] bg-surface p-8 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/paywize-mark.svg" alt="Paywize" width={40} height={40} />
-        <div className="flex flex-col gap-1.5">
-          <h1 className="t-28b text-ink">You are logged out</h1>
-          <p className="t-14r text-ink-2">Your progress is saved. Log in to pick up where you left off.</p>
-        </div>
-        <Button full onClick={onLogin}>
-          Log in again
-        </Button>
-      </section>
     </div>
   );
 }

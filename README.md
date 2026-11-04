@@ -1,7 +1,7 @@
 # Paywize merchant onboarding (v3)
 
 Web onboarding flow from PAN entry to sandbox and go-live, built from the
-"PG – Web v2" Figma file and the v2 Web Design System. Signup is out of scope.
+"PG – Web v2" Figma file and the v2 Web Design System. Sign up and sign in come first, then the onboarding flow.
 
 ## Run it
 

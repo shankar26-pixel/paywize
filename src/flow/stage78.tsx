@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Chip, CtaRow, DocRow, OtpModal, SegmentBar, SummaryTable } from "@/components/ui/ds";
+import { Alert, Button, Chip, CtaRow, DocRow, OtpModal, SegmentBar, SummaryTable } from "@/components/ui/ds";
 import { CheckBadge, FileCheck, FileText } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { MSA_DOCS } from "./data";
@@ -19,6 +19,11 @@ export function ESignDocs({ s, set, go }: Ctx) {
       title="Sign your documents"
       subtitle={all ? "All documents are signed. Submit to finish." : "Sign each document with Aadhaar eSign. You can submit once all are signed."}
     >
+      {!s.isSignatory && !all && (
+        <Alert tone="info" dismissible={false}>
+          An authorised signatory must sign. Each OTP goes to their Aadhaar-linked mobile, so have them with you.
+        </Alert>
+      )}
       <div className="flex items-center justify-between">
         <h2 className="t-16s text-ink">E-Sign documents</h2>
         <span className={`t-12s ${all ? "text-success" : "text-ink-2"}`} role="status">
@@ -141,13 +146,17 @@ export function ESignModal({ s, set, toast }: Ctx) {
   );
 }
 
-export function MsaSigned({ go }: Ctx) {
+export function MsaSigned({ s, go }: Ctx) {
   return (
     <SuccessScreen
       title="Agreement signed"
-      subtitle="Your MSA is signed and a copy is in your email. Two quick checks left: a live selfie and a short business verification."
+      subtitle={
+        s.isSignatory
+          ? "Your MSA is signed and a copy is in your email. One quick check left: a live selfie."
+          : "Your MSA is signed and a copy is in your email. One quick check left: a live selfie from the authorised signatory."
+      }
       detail={`Signed with Aadhaar eSign · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
-      action={{ label: "Verify your face", onClick: () => go("6.8") }}
+      action={s.isSignatory ? { label: "Verify your face", onClick: () => go("6.8") } : { label: "Share verification link", onClick: () => go("6.8.L") }}
     />
   );
 }
@@ -155,6 +164,15 @@ export function MsaSigned({ go }: Ctx) {
 /* ───────────── 8 Sandbox and probation ───────────── */
 
 export function Sandbox({ s, go }: Ctx) {
+  if (s.limited)
+    return (
+      <SuccessScreen
+        title="Limited transactions are active"
+        subtitle="You can run 10 test transactions and accept up to 10 live transactions. Funds will settle after your business verification is complete."
+        detail={`${s.tests} of 10 test · ${s.live} of 10 live`}
+        action={{ label: s.tests >= 10 ? "Continue" : "Start test payments", onClick: () => go(s.tests >= 10 ? "8.2" : "8.1") }}
+      />
+    );
   return (
     <SuccessScreen
       title="Account approved: sandbox mode"
@@ -250,12 +268,12 @@ const LIVE_AMOUNTS = [1240, 560, 2899, 349, 1999, 780, 4250, 1150, 699, 3200];
 
 export function LiveTransactions({ s, set, go, toast }: Ctx) {
   return (
-    <Page title="Almost live" subtitle="Your first 10 live payments are monitored.">
+    <Page title={s.limited ? "Limited live payments" : "Almost live"} subtitle="Your first 10 live payments are monitored.">
       <Counter label="Live transactions" done={s.live} />
       <SummaryTable
         rows={[
           { label: "Completed", value: `${s.live} of 10` },
-          { label: "Settlement", value: "Held until probation ends" },
+          { label: "Settlement", value: s.limited ? "Held until verification is complete" : "Held until probation ends" },
         ]}
       />
       <Actions
@@ -264,9 +282,9 @@ export function LiveTransactions({ s, set, go, toast }: Ctx) {
             label: "Continue",
             onClick: () => {
               const amt = LIVE_AMOUNTS[s.live % LIVE_AMOUNTS.length].toLocaleString("en-IN");
-              if (s.live + 1 >= 10) return go("8.3", { live: 10 });
+              if (s.live + 1 >= 10) return go(s.limited ? "6.5" : "8.3", { live: 10 });
               set({ live: s.live + 1 });
-              toast(`Live payment of ₹${amt} received`, `${s.live + 1} of 10 · settles after probation`);
+              toast(`Live payment of ₹${amt} received`, `${s.live + 1} of 10 · settles after ${s.limited ? "verification" : "probation"}`);
             },
           },
         ]}

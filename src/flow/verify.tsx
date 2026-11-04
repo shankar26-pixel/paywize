@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Alert, OptionRow, cx } from "@/components/ui/ds";
-import { Building, Clock, IdCard, Smartphone, Sun } from "@/components/ui/icons";
+import { useEffect, useRef, useState, type HTMLAttributes, type PointerEvent } from "react";
+import { Button, Input, Select, SummaryTable, cx } from "@/components/ui/ds";
+import { Clock, IdCard, Sun } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
-import { Actions, StatusScreen, SuccessScreen, useFilePicker, type Ctx } from "./common";
-import { ProcessView } from "./process";
-import type { FlowState } from "./state";
+import { Actions, StatusScreen, UploadRow, startUpload, type Ctx } from "./common";
+import { ProcessView, ResultIcon } from "./process";
+import type { DocState, FlowState } from "./state";
 
 /** The person completing KYC: chosen on 3.0, or the applicant for individuals. */
 export function kycPerson(s: FlowState) {
@@ -21,7 +21,23 @@ const TIPS = [
   { icon: <Clock size={20} />, title: "Takes about 20 seconds", desc: "Follow the prompts: blink, then turn slightly." },
 ];
 
-export function FaceIntro({ s, go }: Ctx) {
+const FACE_ATTEMPTS = 3;
+const DAY_MS = 24 * 3600 * 1000;
+
+/** Sends the merchant to sign in; progress is saved and they resume here afterwards. */
+export function saveAndExit({ s, replace, toast }: Ctx) {
+  replace("I.1", { resume: s.screen, modal: null, history: [] });
+  toast("Your progress is saved", "Sign in any time to continue.");
+}
+
+/** Retries are spent once locked; a lock that has passed gives the merchant a fresh 3 attempts. */
+function startFaceCheck({ s, go }: Ctx) {
+  if (s.faceLockUntil > Date.now()) return go("6.8.E3");
+  go("6.8.1", s.faceLockUntil ? { faceFails: 0, faceLockUntil: 0 } : undefined);
+}
+
+export function FaceIntro(ctx: Ctx) {
+  const { s } = ctx;
   const name = kycPerson(s);
   return (
     <Page title="Verify your face" subtitle={`A quick live selfie confirms that ${name.split(" ")[0]} is the person completing KYC.`}>
@@ -39,7 +55,7 @@ export function FaceIntro({ s, go }: Ctx) {
       <p className="t-12r text-ink-2">
         We compare it with the photo on your PAN and CKYC record, then delete the video. Only the result is kept.
       </p>
-      <Actions actions={[{ label: "Start face verification", onClick: () => go("6.8.1") }]} />
+      <Actions actions={[{ label: "Start face verification", onClick: () => startFaceCheck(ctx) }]} />
     </Page>
   );
 }
@@ -147,7 +163,12 @@ export function FaceChecking({ s, replace, toast }: Ctx) {
         ]}
         footnote="The video is deleted once the check is done."
         onDone={() => {
-          replace("6.5");
+          if (s.faceFail) {
+            const faceFails = s.faceFails + 1;
+            if (faceFails >= FACE_ATTEMPTS) return replace("6.8.E3", { faceFails, faceLockUntil: Date.now() + DAY_MS });
+            return replace("6.8.E2", { faceFails });
+          }
+          replace("6.1", { faceFails: 0, faceLockUntil: 0 });
           toast("Face verified", `${kycPerson(s)} · match score 98%`);
         }}
       />
@@ -155,159 +176,383 @@ export function FaceChecking({ s, replace, toast }: Ctx) {
   );
 }
 
-export function CameraBlocked({ go, replace }: Ctx) {
-  const [open, input] = useFilePicker(() => replace("6.8.2"), ".jpg,.jpeg,.png");
+export function CameraBlocked(ctx: Ctx) {
+  const { go } = ctx;
   return (
     <StatusScreen
       title="We cannot use your camera"
       subtitle="Face verification needs a front camera."
       tone="warning"
       alertTitle="Camera access is off or unavailable"
-      alertText="Allow camera access for this site in your browser settings, or upload a clear, recent selfie instead."
+      alertText="Allow camera access for this site in your browser settings, or upload left, right and straight photos instead."
       actions={[
-        { label: "Upload a selfie", variant: "secondary", onClick: open },
-        { label: "Try again", onClick: () => go("6.8.1") },
+        { label: "Upload photos", variant: "secondary", onClick: () => go("6.8.U") },
+        { label: "Try again", onClick: () => startFaceCheck(ctx) },
       ]}
-    >
-      {input}
-    </StatusScreen>
+    />
   );
 }
 
-export function FaceNoMatch({ go }: Ctx) {
+export function FaceNoMatch(ctx: Ctx) {
+  const left = Math.max(FACE_ATTEMPTS - ctx.s.faceFails, 0);
   return (
     <StatusScreen
       title="We could not match your face"
       subtitle="This usually means the light was poor or the face was partly hidden."
       tone="error"
-      alertTitle="Let us try once more"
+      alertTitle={`${left} of ${FACE_ATTEMPTS} attempts left today`}
       alertText="Move to brighter light, remove glasses and keep your whole face in the oval."
-      actions={[{ label: "Try again", onClick: () => go("6.8.1") }]}
+      actions={[{ label: "Try again", onClick: () => startFaceCheck(ctx) }]}
     />
   );
 }
 
-/* ───────────────────────── 6.5 Contact point verification (CPV) ───────────────────────── */
-
-/** The next five working days (no Sundays), labelled like "Tomorrow" or "Thu, 5 Nov". */
-function nextDays() {
-  const out: string[] = [];
-  const d = new Date();
-  while (out.length < 5) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() === 0) continue;
-    out.push(
-      out.length === 0 && new Date().getDay() !== 6
-        ? "Tomorrow"
-        : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-    );
-  }
-  return out;
-}
-
-const VIDEO_SLOTS = ["10:00 AM", "11:00 AM", "12:30 PM", "2:00 PM", "3:30 PM", "5:00 PM"];
-const VISIT_SLOTS = ["10 AM – 1 PM", "2 PM – 5 PM"];
-const FULL = new Set(["12:30 PM", "3:30 PM"]);
-
-function ChipGroup({
-  label,
-  options,
-  value,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: Set<string>;
-}) {
+export function FaceLocked(ctx: Ctx) {
+  const { s, go } = ctx;
+  const until = s.faceLockUntil
+    ? new Date(s.faceLockUntil).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
+    : "24 hours from now";
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="t-12s mb-2 text-ink">{label}</legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => {
-          const off = disabled?.has(o);
-          const on = value === o;
-          return (
-            <button
-              key={o}
-              type="button"
-              disabled={off}
-              aria-pressed={on}
-              onClick={() => onChange(o)}
-              className={cx(
-                "t-14m h-10 rounded-full border px-4 transition-colors",
-                on && "border-brand bg-brand text-white",
-                !on && !off && "border-line bg-surface text-ink hover:border-brand",
-                off && "cursor-not-allowed border-line-2 bg-surface-variant text-ink-disabled line-through",
-              )}
-            >
-              {o}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
+    <StatusScreen
+      title="Try again after 24 hours"
+      subtitle={`You have used all ${FACE_ATTEMPTS} attempts for today.`}
+      tone="warning"
+      alertTitle={`You can retry from ${until}`}
+      alertText="Or continue now by uploading left, right and straight photos of the authorised signatory's face. We check these by hand."
+      actions={[
+        { label: "Come back later", variant: "secondary", onClick: () => saveAndExit(ctx) },
+        { label: "Upload photos", onClick: () => go("6.8.U") },
+      ]}
+    />
   );
 }
 
-export function CpvBook({ s, set, go }: Ctx) {
-  const days = nextDays();
-  const video = s.cpvMode === "video";
-  const slots = video ? VIDEO_SLOTS : VISIT_SLOTS;
-  const ready = !!s.cpvDay && slots.includes(s.cpvTime);
+const ANGLES = [
+  { key: "left", title: "Left side of the face", hint: "Turn your head to the right, so the left side faces the camera." },
+  { key: "right", title: "Right side of the face", hint: "Turn your head to the left, so the right side faces the camera." },
+  { key: "front", title: "Straight, looking at the camera", hint: "Full face in good light, with no cap, mask or dark glasses." },
+] as const;
+
+const IMAGE = /\.(jpe?g|png)$/i;
+
+export function FacePhotos({ s, go, update, toast }: Ctx) {
+  const photos = s.facePhotos;
+  const ready = ANGLES.every((a) => photos[a.key].status === "uploaded");
+  const apply = (key: (typeof ANGLES)[number]["key"], d: DocState) => update((p) => ({ facePhotos: { ...p.facePhotos, [key]: d } }));
   return (
-    <Page title="Verify your business" subtitle="A short contact point verification, required for every account.">
-      <div role="radiogroup" aria-label="Verification method" className="flex flex-col gap-3">
-        <OptionRow
-          name="cpv"
-          icon={<Smartphone size={20} />}
-          title="Video call"
-          description="About 10 minutes, from anywhere. Keep your PAN and a government ID ready."
-          checked={video}
-          onSelect={() => set({ cpvMode: "video", cpvTime: "" })}
+    <Page title="Upload photos of the face" subtitle={`Three recent photos of the authorised signatory${s.isSignatory ? "" : ", not your own"}.`}>
+      {ANGLES.map((a) => (
+        <UploadRow
+          key={a.key}
+          title={a.title}
+          hint={`${a.hint} JPG or PNG, up to 5 MB.`}
+          doc={photos[a.key]}
+          onPick={([file]) => {
+            if (!IMAGE.test(file.name)) return apply(a.key, { status: "error", note: "Upload a JPG or PNG photo." });
+            startUpload(file, (d) => apply(a.key, d));
+          }}
         />
-        <OptionRow
-          name="cpv"
-          icon={<Building size={20} />}
-          title="Visit to your registered address"
-          description={`An officer visits ${s.record?.office ?? "your registered address"}.`}
-          checked={!video}
-          onSelect={() => set({ cpvMode: "visit", cpvTime: "" })}
-        />
-      </div>
-      <ChipGroup label="Pick a day" options={days} value={s.cpvDay} onChange={(cpvDay) => set({ cpvDay })} />
-      <ChipGroup
-        label={video ? "Pick a time" : "Pick a window"}
-        options={slots}
-        value={s.cpvTime}
-        onChange={(cpvTime) => set({ cpvTime })}
-        disabled={video ? FULL : undefined}
+      ))}
+      <Actions
+        actions={[
+          {
+            label: "Submit photos",
+            disabled: !ready,
+            onClick: () => {
+              toast("Photos received", "We will check them by hand along with your application.");
+              go("6.1");
+            },
+          },
+        ]}
       />
-      {!video && (
-        <Alert tone="info" dismissible={false}>
-          Someone authorised to act for the business must be present with an original ID.
-        </Alert>
-      )}
-      <Actions actions={[{ label: "Confirm slot", disabled: !ready, onClick: () => go("6.6") }]} />
     </Page>
   );
 }
 
-export function CpvConfirmed({ s, go }: Ctx) {
-  const video = s.cpvMode === "video";
+/* ───────────── The applicant is not the signatory: share the link ───────────── */
+
+const SOMEONE_ELSE = "other";
+
+export function FaceShare({ s, go, toast }: Ctx) {
+  const signatories = s.people.filter((p) => /director|partner|proprietor|signatory/i.test(p.role));
+  const options = [...signatories.map((p) => ({ value: p.id, label: p.name, hint: p.role })), { value: SOMEONE_ELSE, label: "Someone else" }];
+  const [who, setWho] = useState("");
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [error, setError] = useState("");
+  const person = signatories.find((p) => p.id === who);
+  const fullName = person?.name ?? name.trim();
+  const ready = !!fullName && !!mobile;
   return (
-    <SuccessScreen
-      title="Slot confirmed"
-      subtitle={
-        video
-          ? "We will send a joining link 15 minutes before. Submit your application now; the call completes it."
-          : "We will text you the officer's name the day before. Submit your application now; the visit completes it."
-      }
-      detail={`${video ? "Video call" : "Visit"} · ${s.cpvDay || "Tomorrow"}, ${s.cpvTime || "11:00 AM"}`}
-      action={{ label: "Submit application", onClick: () => go("6.1") }}
-    />
+    <Page title="Share the face verification link" subtitle="An authorised signatory must verify their own face, on their own phone.">
+      <Select label="Who should verify?" placeholder="Select a director or signatory" value={who} onChange={setWho} options={options} />
+      {who === SOMEONE_ELSE && <Input label="Their full name" value={name} onChange={setName} placeholder="As on their PAN" />}
+      <Input
+        label="Their mobile number"
+        inputMode="tel"
+        value={mobile}
+        placeholder="+91 98765 43210"
+        error={error}
+        help="We send the link by SMS. It works for 24 hours."
+        onChange={(v) => {
+          setMobile(v);
+          setError("");
+        }}
+      />
+      <Actions
+        actions={[
+          { label: "They are with me", variant: "secondary", onClick: () => go("6.8") },
+          {
+            label: "Send link",
+            disabled: !ready,
+            onClick: () => {
+              const m = mobile.replace(/\D/g, "").replace(/^91(?=\d{10}$)/, "");
+              if (!/^[6-9]\d{9}$/.test(m)) return setError("Enter a valid 10-digit mobile number.");
+              toast(`Link sent to ${fullName.split(" ")[0]}`, `By SMS to +91 ••••••${m.slice(-4)}.`);
+              go("6.8.W", { faceLink: { name: fullName, mobile: m } });
+            },
+          },
+        ]}
+      />
+    </Page>
   );
 }
 
+export function FaceWaiting(ctx: Ctx) {
+  const { s, replace, toast } = ctx;
+  const { name, mobile } = s.faceLink;
+  const first = (name || "the signatory").split(" ")[0];
+  return (
+    <Page title={`Waiting for ${first}`} subtitle="We will continue as soon as they finish. You can close this page." icon={<ResultIcon tone="info" />}>
+      <SummaryTable
+        rows={[
+          { label: "Link sent to", value: name || "Authorised signatory" },
+          { label: "Mobile", value: `+91 ••••••${(mobile || "0000").slice(-4)}` },
+          { label: "Link works for", value: "24 hours" },
+          { label: "Attempts allowed", value: `${FACE_ATTEMPTS} a day` },
+        ]}
+      />
+      <Actions
+        actions={[
+          { label: "Resend link", variant: "secondary", onClick: () => toast("Link sent again", `By SMS to +91 ••••••${(mobile || "0000").slice(-4)}.`) },
+          {
+            label: "Check status",
+            onClick: () => {
+              toast("Face verified", `${name || "Authorised signatory"} · match score 98%`);
+              replace("6.1");
+            },
+          },
+        ]}
+      />
+    </Page>
+  );
+}
+
+/* ───────────── 6.5 Contact point verification (CPV) ───────────── */
+
+/**
+ * Deliberately says nothing about how or when CPV happens: no date, method, or who carries it out.
+ * A merchant who knows when it is coming could stage it.
+ */
+export function CpvProcessing(ctx: Ctx) {
+  const { s, go } = ctx;
+  return (
+    <section className="flex w-full max-w-[880px] flex-col items-center gap-2 md:flex-row md:items-start md:justify-center md:gap-16">
+      <VerificationPass business={s.record?.displayName ?? "Your business"} />
+      <div className="relative z-10 flex w-full max-w-[500px] flex-col items-center text-center md:pt-8">
+        <span className="flex size-[72px] items-center justify-center rounded-full bg-brand-container text-brand" aria-hidden="true">
+          <Clock size={36} />
+        </span>
+        <h1 className="t-28b mt-6 text-ink">Business verification in progress</h1>
+        <p className="t-14r mt-2 text-ink-2">This can take 2 weeks or longer. No action is needed from you, and we will email you once it is complete.</p>
+        <div className="mt-7 flex w-full flex-col items-center">
+          <div className="flex w-full flex-col items-center gap-1 rounded-[28px] bg-surface px-6 py-7">
+            <h2 className="t-18s text-ink">You can still accept limited transactions</h2>
+            <p className="t-14r text-ink-2">Funds will settle after your business verification is complete.</p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <Button size="lg" variant="secondary" onClick={() => saveAndExit(ctx)}>
+                Come back later
+              </Button>
+              {/* A used batch starts again, so the merchant can always keep transacting while verification runs. */}
+              <Button size="lg" onClick={() => go("8.0", { limited: true, live: s.live >= 10 ? 0 : s.live })}>
+                Start transaction
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Side notches where the pass tears along its two perforated lines.
+const NOTCHES = ["132px", "368px"].flatMap((y) => [`0 ${y}`, `100% ${y}`]);
+const PASS_MASK = NOTCHES.map((at) => `radial-gradient(circle 8px at ${at}, transparent 98%, black)`).join(", ");
+
+function PassField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="font-mono text-[9px] leading-3 tracking-wider text-[#606078] uppercase">{label}</span>
+      <span className="truncate text-[12px] leading-4 font-semibold">{value}</span>
+    </div>
+  );
+}
+
+const PASS_REST = -5;
+const PASS_MAX = 55;
+
+type PassHandlers = Pick<HTMLAttributes<HTMLDivElement>, "onPointerDown" | "onPointerMove" | "onPointerUp" | "onPointerCancel">;
+
+/**
+ * Pendulum for the pass: it swings in on load, follows the pointer around the top of its cord
+ * while held, and swings back to rest on release. Writes straight to the element, so no re-renders.
+ */
+function usePendulum() {
+  const ref = useRef<HTMLDivElement>(null);
+  const handlers = useRef<PassHandlers>({});
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Desktop only: on smaller screens, and with reduced motion, the pass simply hangs still.
+    const motion = window.matchMedia("(min-width: 768px) and (prefers-reduced-motion: no-preference)");
+    let stop = () => {};
+    const sync = () => {
+      stop();
+      stop = motion.matches ? swing(el, handlers.current) : () => {};
+    };
+    sync();
+    motion.addEventListener("change", sync);
+    return () => {
+      motion.removeEventListener("change", sync);
+      stop();
+    };
+  }, []);
+
+  return { ref, handlers };
+}
+
+function swing(el: HTMLDivElement, handlers: PassHandlers) {
+  let angle = 24;
+  let speed = 0;
+  let held = false;
+  let pointer = -1;
+  let target = PASS_REST;
+  let grab = 0;
+  let frame = 0;
+  let last = 0;
+
+  const tick = (now: number) => {
+    const dt = Math.min((now - last) / 1000 || 1 / 60, 1 / 30);
+    last = now;
+    // Stiff and well damped while held, loose and swingy once let go.
+    const [stiffness, damping] = held ? [220, 24] : [26, 1.5];
+    speed += (stiffness * (target - angle) - damping * speed) * dt;
+    angle += speed * dt;
+    el.style.rotate = `${angle.toFixed(2)}deg`;
+    if (held || Math.abs(speed) > 0.05 || Math.abs(angle - target) > 0.05) frame = requestAnimationFrame(tick);
+    else frame = 0;
+  };
+  const run = () => {
+    if (frame) return;
+    last = performance.now();
+    frame = requestAnimationFrame(tick);
+  };
+  // Measured on the unrotated parent, the top of the cord is the pivot.
+  const pointerAngle = (e: PointerEvent<HTMLDivElement>) => {
+    const box = el.parentElement!.getBoundingClientRect();
+    return (-Math.atan2(e.clientX - (box.left + box.width / 2), Math.max(e.clientY - box.top, 1)) * 180) / Math.PI;
+  };
+  const release = () => {
+    held = false;
+    target = PASS_REST;
+    el.style.cursor = "grab";
+    run();
+  };
+  handlers.onPointerDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    held = true;
+    pointer = e.pointerId;
+    grab = angle - pointerAngle(e);
+    target = angle;
+    el.style.cursor = "grabbing";
+    run();
+  };
+  handlers.onPointerMove = (e) => {
+    if (held && e.pointerId === pointer) target = Math.max(-PASS_MAX, Math.min(PASS_MAX, pointerAngle(e) + grab));
+  };
+  handlers.onPointerUp = (e) => e.pointerId === pointer && release();
+  handlers.onPointerCancel = (e) => e.pointerId === pointer && release();
+  el.style.cursor = "grab";
+  run();
+  return () => {
+    cancelAnimationFrame(frame);
+    el.style.rotate = "";
+    el.style.cursor = "";
+    for (const key of Object.keys(handlers) as (keyof PassHandlers)[]) delete handlers[key];
+  };
+}
+
+/** A printed pass on a cord that the merchant can grab and swing; colours are fixed, like paper, in both themes. */
+function VerificationPass({ business }: { business: string }) {
+  const { ref, handlers } = usePendulum();
+  return (
+    <div className="-mt-9 h-[400px] w-[260px] shrink-0 md:h-[590px]" aria-hidden="true">
+      <div
+        ref={ref}
+        className="anim-pass relative flex origin-top scale-[0.68] flex-col items-center select-none md:touch-pan-y md:scale-100"
+        style={{ filter: "drop-shadow(0 14px 22px rgb(26 16 82 / 0.18))" }}
+        onPointerDown={(e) => handlers.current.onPointerDown?.(e)}
+        onPointerMove={(e) => handlers.current.onPointerMove?.(e)}
+        onPointerUp={(e) => handlers.current.onPointerUp?.(e)}
+        onPointerCancel={(e) => handlers.current.onPointerCancel?.(e)}
+      >
+        <svg width="40" height="84" viewBox="0 0 40 84" className="relative z-10 -mb-5" fill="none" stroke="#25253c" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M13 0 19 66M27 0 21 66" />
+          <circle cx="20" cy="72" r="6" strokeWidth="3.5" fill="var(--surface-background)" />
+        </svg>
+        <div
+          className="flex h-[510px] w-[260px] flex-col rounded-2xl bg-[#f5f3ee] text-[#25253c]"
+          style={{ mask: PASS_MASK, WebkitMask: PASS_MASK, maskComposite: "intersect", WebkitMaskComposite: "source-in" }}
+        >
+          <div className="flex h-[132px] shrink-0 flex-col justify-end gap-2 border-b border-dashed border-[#25253c]/30 px-5 pb-4">
+            <div className="flex items-center gap-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/figma/auth/mark.svg" alt="" draggable={false} className="size-6" />
+              <span className="text-[18px] font-medium tracking-[-0.37px] italic" style={{ fontFamily: "var(--font-poppins)" }}>
+                Paywize
+              </span>
+            </div>
+            <span className="w-fit rounded-full border border-[#25253c] px-2.5 py-0.5 text-[11px] leading-4 font-medium">Merchant pass</span>
+          </div>
+          <div className="flex h-[236px] shrink-0 flex-col justify-center border-b border-dashed border-[#25253c]/30 px-4">
+            <div
+              className="relative flex h-[204px] flex-col justify-between overflow-hidden rounded-xl p-4 text-white"
+              style={{ background: "linear-gradient(160deg, #1a1052 10%, #6953e4 75%, #1a1052 120%)" }}
+            >
+              <span className="absolute -top-8 -right-8 size-28 rounded-full bg-[#d9ff00]/90" />
+              <span className="absolute right-6 -bottom-10 size-24 rounded-full bg-white/15" />
+              <span className="relative font-mono text-[10px] leading-3 tracking-wider uppercase">In progress</span>
+              <p className="relative">
+                <span className="block text-[20px] leading-6 font-extrabold">Move money</span>
+                <span className="block text-[26px] leading-8 font-semibold text-[#d9ff00] italic" style={{ fontFamily: "var(--font-playfair)" }}>
+                  without friction
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-1 flex-col justify-between px-5 py-4">
+            <div className="flex flex-col gap-2">
+              <PassField label="Business" value={business} />
+              <PassField label="Reference" value="PWZ-2026-48213" />
+            </div>
+            <div
+              className="h-9 w-full"
+              style={{ background: "repeating-linear-gradient(90deg, #25253c 0 2px, transparent 2px 4px, #25253c 4px 5px, transparent 5px 9px, #25253c 9px 12px, transparent 12px 14px)" }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
