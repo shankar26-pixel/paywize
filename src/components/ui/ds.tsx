@@ -17,6 +17,7 @@ import {
   CircleCheck,
   CircleX,
   Info,
+  Mail,
   TriangleAlert,
   Upload,
   X,
@@ -27,7 +28,7 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 /* ───────────────────────── Button ───────────────────────── */
 
 type ButtonProps = {
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "muted";
   size?: "md" | "lg" | "sm";
   disabled?: boolean;
   loading?: boolean;
@@ -60,7 +61,9 @@ export function Button({
     ? "bg-container text-ink-disabled cursor-not-allowed"
     : variant === "primary"
       ? "bg-btn text-btn-text hover:opacity-90 active:scale-[0.98]"
-      : "bg-surface text-ink border border-line hover:border-ink-3 active:scale-[0.98]";
+      : variant === "muted"
+        ? "bg-container text-ink border-[0.5px] border-line hover:border-ink-3 active:scale-[0.98]"
+        : "bg-surface text-ink border border-line hover:border-ink-3 active:scale-[0.98]";
   return (
     <button
       type={type}
@@ -802,19 +805,28 @@ export function Modal({
   children,
   label,
   width = 520,
+  bare,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   label: string;
   width?: number;
+  /** No close button and tighter padding, for dialogs that carry their own Cancel. */
+  bare?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Callers pass an inline onClose. Read it through a ref so a re-render does not re-run the focus effect
+  // below, which would pull focus back to the first input.
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close.current();
       if (e.key === "Tab" && ref.current) {
         const f = ref.current.querySelectorAll<HTMLElement>(
           'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
@@ -841,7 +853,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--scrim)" }}>
@@ -851,17 +863,22 @@ export function Modal({
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
-        className="anim-pop relative flex max-h-[calc(100vh-32px)] w-full flex-col gap-4 overflow-auto rounded-[28px] bg-surface p-6 outline-none"
+        className={cx(
+          "anim-pop relative flex max-h-[calc(100vh-32px)] w-full flex-col overflow-auto bg-surface outline-none",
+          bare ? "gap-6 rounded-3xl p-[18px]" : "gap-4 rounded-[28px] p-6",
+        )}
         style={{ maxWidth: width }}
       >
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          className="absolute top-3.5 right-3.5 flex size-8 items-center justify-center rounded-full bg-container text-ink-2 hover:text-ink"
-        >
-          <X size={20} />
-        </button>
+        {!bare && (
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute top-3.5 right-3.5 flex size-8 items-center justify-center rounded-full bg-container text-ink-2 hover:text-ink"
+          >
+            <X size={20} />
+          </button>
+        )}
         {children}
       </div>
     </div>
@@ -903,6 +920,10 @@ export function OtpInput({
   error?: boolean;
 }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
+  // Back to the first cell whenever the code is cleared: a wrong code, a resend, the next document.
+  useEffect(() => {
+    if (!value) refs.current[0]?.focus();
+  }, [value]);
   const set = (i: number, ch: string) => {
     const arr = value.padEnd(length, " ").split("");
     arr[i] = ch || " ";
@@ -937,12 +958,91 @@ export function OtpInput({
             if (e.key === "Backspace" && !value[i]?.trim()) refs.current[i - 1]?.focus();
           }}
           className={cx(
-            "t-16s h-12 w-full min-w-0 rounded-xl border text-center text-ink outline-none focus:border-ink-2",
+            "t-16s h-[70px] w-full min-w-0 rounded-xl border text-center text-ink outline-none focus:border-2 focus:border-brand",
             error ? "border-error bg-error-container" : "border-line bg-surface",
           )}
         />
       ))}
     </div>
+  );
+}
+
+/** The OTP dialog from the design system (2135:593). Used for every OTP in the flow. */
+export function OtpModal({
+  label,
+  subtitle,
+  notice,
+  value,
+  onChange,
+  error,
+  secondsLeft,
+  canResend = true,
+  onResend,
+  onCancel,
+  onContinue,
+  canContinue,
+  loading,
+  inputKey,
+}: {
+  label: string;
+  subtitle: string;
+  /** Information about this OTP, such as which document it signs. */
+  notice?: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+  secondsLeft: number;
+  canResend?: boolean;
+  onResend: () => void;
+  onCancel: () => void;
+  onContinue: () => void;
+  canContinue: boolean;
+  loading?: boolean;
+  inputKey?: string | number;
+}) {
+  return (
+    <Modal open bare width={575} label={label} onClose={onCancel}>
+      <div className="flex items-center gap-5">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+          <Mail size={24} />
+        </span>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="t-16s font-bold text-ink">Enter OTP</h2>
+          <p className="t-14m text-ink-2">{subtitle}</p>
+        </div>
+      </div>
+      {notice && (
+        <Alert tone="info" dismissible={false}>
+          {notice}
+        </Alert>
+      )}
+      <div className="flex flex-col gap-[18px]">
+        <OtpInput key={inputKey} value={value} onChange={onChange} error={!!error} />
+        {error && <FieldHelp error>{error}</FieldHelp>}
+        {canResend && (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="t-14m text-ink-2" aria-live="off">
+              {secondsLeft > 0 ? `OTP Expires in ${secondsLeft} sec` : "OTP expired"}
+            </p>
+            <button type="button" onClick={onResend} className="t-14m font-bold text-ink-3 underline hover:text-ink-2">
+              Resend OTP
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2.5">
+        <span className="min-w-32">
+          <Button size="lg" variant="muted" full onClick={onCancel}>
+            Cancel
+          </Button>
+        </span>
+        <span className="min-w-32">
+          <Button size="lg" full disabled={!canContinue} loading={loading} onClick={onContinue}>
+            Continue
+          </Button>
+        </span>
+      </div>
+    </Modal>
   );
 }
 

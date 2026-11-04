@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Chip, CtaRow, DocRow, FieldHelp, Modal, ModalArt, ModalHeader, OtpInput, SegmentBar, SummaryTable } from "@/components/ui/ds";
+import { Button, Chip, CtaRow, DocRow, OtpModal, SegmentBar, SummaryTable } from "@/components/ui/ds";
 import { CheckBadge, FileCheck, FileText } from "@/components/ui/icons";
 import { Page } from "@/components/shell";
 import { MSA_DOCS } from "./data";
@@ -67,13 +67,15 @@ export function ESignDocs({ s, set, go }: Ctx) {
 
 /* ───────────── 7.1 Aadhaar eSign popup ───────────── */
 
+const OTP_SECONDS = 120;
+
 export function ESignModal({ s, set, toast }: Ctx) {
   const [code, setCode] = useState("");
   const [attempts, setAttempts] = useState(3);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [justSigned, setJustSigned] = useState("");
-  const [wait, setWait] = useState(30);
+  const [wait, setWait] = useState(OTP_SECONDS);
   const doc = MSA_DOCS[s.signing];
   const locked = attempts === 0;
 
@@ -84,7 +86,7 @@ export function ESignModal({ s, set, toast }: Ctx) {
   }, [wait]);
 
   const verify = (value = code) => {
-    if (busy || value.length !== 6) return;
+    if (busy || locked || wait <= 0 || value.length !== 6) return;
     setBusy(true);
     setTimeout(() => {
       setBusy(false);
@@ -105,70 +107,37 @@ export function ESignModal({ s, set, toast }: Ctx) {
       // Carry straight on to the next document with a fresh code, so all three are signed in one go.
       setJustSigned(doc.title);
       setCode("");
-      setWait(30);
+      setWait(OTP_SECONDS);
       set({ signed, signing: next });
     }, 900);
   };
 
   return (
-    <Modal open label="Sign with Aadhaar eSign" onClose={() => set({ modal: null })}>
-      <ModalHeader
-        title="Sign with Aadhaar eSign"
-        subtitle={`Enter the 6-digit code sent to the mobile linked with your Aadhaar to sign the ${doc.title}.`}
-      />
-      {justSigned ? (
-        <p className="t-12s anim-fade-up flex items-center gap-2 rounded-xl bg-success-container px-4 py-3 text-on-success" role="status">
-          <CheckBadge /> {justSigned} signed. We sent a new code for the next one.
-        </p>
-      ) : (
-        <ModalArt src="/figma/art-edit.png" />
-      )}
-      <div className="flex flex-col gap-2">
-        <OtpInput
-          key={s.signing}
-          value={code}
-          onChange={(v) => {
-            setCode(v);
-            setError("");
-            if (v.length === 6) verify(v);
-          }}
-          error={!!error}
-        />
-        {error ? (
-          <FieldHelp error>{error}</FieldHelp>
-        ) : (
-          <FieldHelp>
-            Sent to ******4821.{" "}
-            {wait > 0 ? (
-              <span className="t-12r text-ink-3">Resend in {wait}s</span>
-            ) : (
-              <button
-                type="button"
-                className="t-12s text-brand underline"
-                onClick={() => {
-                  setCode("");
-                  setWait(30);
-                  toast("New code sent", "Check your Aadhaar-linked mobile.");
-                }}
-              >
-                Resend code
-              </button>
-            )}
-          </FieldHelp>
-        )}
-      </div>
-      <CtaRow>
-        {locked ? (
-          <Button variant="secondary" onClick={() => set({ modal: null })}>
-            Close
-          </Button>
-        ) : (
-          <Button disabled={code.length !== 6} loading={busy} onClick={() => verify()}>
-            {busy ? "Signing" : "Verify and sign"}
-          </Button>
-        )}
-      </CtaRow>
-    </Modal>
+    <OtpModal
+      label={`Sign the ${doc.title} with Aadhaar eSign`}
+      subtitle="Sent to your Aadhaar-linked mobile number ***** *4821."
+      notice={justSigned ? `${justSigned} signed. Enter the new OTP to sign the ${doc.title}.` : undefined}
+      inputKey={s.signing}
+      value={code}
+      onChange={(v) => {
+        setCode(v);
+        setError("");
+        if (v.length === 6) verify(v);
+      }}
+      error={error}
+      secondsLeft={wait}
+      canResend={!locked}
+      onResend={() => {
+        setCode("");
+        setError("");
+        setWait(OTP_SECONDS);
+        toast("New OTP sent", "Check your Aadhaar-linked mobile.");
+      }}
+      onCancel={() => set({ modal: null })}
+      onContinue={() => verify()}
+      canContinue={code.length === 6 && wait > 0 && !locked}
+      loading={busy}
+    />
   );
 }
 

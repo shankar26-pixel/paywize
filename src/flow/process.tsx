@@ -9,8 +9,7 @@ import { Check } from "@/components/ui/icons";
 export type ProcessStep = { label: string; ms: number };
 
 /**
- * A "we're working on it" block: illustration, a determinate bar, and a checklist that ticks off
- * step by step. Calls onDone once every step has finished. Used for CKYC, penny drop, DigiLocker
+ * A "we're working on it" block: illustration and a checklist that ticks off step by step. Calls onDone once every step has finished. Used for CKYC, penny drop, DigiLocker
  * and screening, so every wait looks and behaves the same.
  */
 export function ProcessView({
@@ -39,34 +38,14 @@ export function ProcessView({
     return () => clearTimeout(t);
   }, [active, steps]);
 
-  const total = steps.reduce((n, s) => n + s.ms, 0);
-  const elapsed = steps.slice(0, active).reduce((n, s) => n + s.ms, 0);
   const current = steps[Math.min(active, steps.length - 1)];
-  // The bar glides toward the end of the running step over that step's duration, so it never sits still.
-  const target = active < steps.length ? Math.round(((elapsed + current.ms) / total) * 100) : 100;
-  const [bar, setBar] = useState(0);
-  useEffect(() => {
-    const r = requestAnimationFrame(() => setBar(target));
-    return () => cancelAnimationFrame(r);
-  }, [target]);
 
   return (
     <div className="flex flex-col gap-5" aria-busy={active < steps.length}>
       {art && <div className="flex justify-center pt-2">{art}</div>}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <p className="t-14s text-ink" aria-live="polite">
-            {active < steps.length ? current.label : "All done"}
-          </p>
-          <span className="t-12s text-brand tabular-nums">{active < steps.length ? `Step ${active + 1} of ${steps.length}` : "Done"}</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-line-2">
-          <div
-            className="h-full rounded-full bg-brand transition-[width] ease-linear"
-            style={{ width: `${Math.max(bar, 3)}%`, transitionDuration: `${active < steps.length ? current.ms : 300}ms` }}
-          />
-        </div>
-      </div>
+      <p className="sr-only" aria-live="polite">
+        {active < steps.length ? current.label : "All done"}
+      </p>
       <ol className="flex flex-col gap-3 rounded-xl bg-surface-variant p-4">
         {steps.map((s, i) => {
           const state = i < active ? "done" : i === active ? "active" : "todo";
